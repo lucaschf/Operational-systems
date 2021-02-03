@@ -1,0 +1,3 @@
+F:/TSI/2nd period/LP/LPAS/cmake-build-debug/CMakeFiles/LPAS.dir
+F:/TSI/2nd period/LP/LPAS/cmake-build-debug/CMakeFiles/edit_cache.dir
+F:/TSI/2nd period/LP/LPAS/cmake-build-debug/CMakeFiles/rebuild_cache.dir
