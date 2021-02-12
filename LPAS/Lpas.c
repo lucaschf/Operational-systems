@@ -4,7 +4,8 @@
 #include <locale.h>
 #include <errno.h>
 
-#define MAX 100 // maximum number of availableInstructions
+#define MAX 100 // maximum number of availableInstructions and programs
+#define MAX_VARIABLES 9999 // maximum number of variables
 #define INSTRUCTION_LENGTH 10 // maximum length of parameterized instruction
 #define INSTRUCTION_NAME_LENGTH 5 // maximum instruction name length
 
@@ -20,15 +21,15 @@
 #define HALT "HALT"
 #define AVAILABLE_INSTRUCTIONS 9
 
-#define APP_NAME "Maquina de execucao LPAS"
-#define EDIT_PROGRAM  "Editar Programa"
-#define STOP_INSTRUCTION_READING_MESSAGE "Para finalizar tecle ENTER em uma linha em branco."
-#define PROGRAM_NUMBER_ON_READ "Programa Nº"
-#define PARAMETER_INVALID_OR_NOT_INFORMED "Parametro invalido ou não informado."
-#define INVALID_INSTRUCTION "Instrucao invalida."
+#define APP_NAME "LPAS execution machine"
+#define EDIT_PROGRAM  "Edit Programa"
+#define STOP_INSTRUCTION_READING_MESSAGE "To finish, press ENTER on a blank line."
+#define PROGRAM_NUMBER_ON_READ "Program Number"
+#define PARAMETER_INVALID_OR_NOT_INFORMED "Parameter invalid or not informed."
+#define INVALID_INSTRUCTION "Invalid instruction."
 #define NO_PROGRAMS_FOUND "No programs found."
-#define PROGRAM_NUMBER "Numero do programa"
-#define INVALID_PROGRAM "Programa inválido"
+#define PROGRAM_NUMBER "Program Number"
+#define INVALID_PROGRAM "Invalid program"
 
 typedef struct {
     char name[INSTRUCTION_NAME_LENGTH];
@@ -39,6 +40,7 @@ typedef struct {
     int instructionsCount;
     int recorder;
     Instruction instructions[MAX];
+    int variables[MAX_VARIABLES];
 } Program;
 
 const char *availableInstructions[AVAILABLE_INSTRUCTIONS] = {
@@ -90,7 +92,7 @@ int assemblyInstruction(char parameterizedInstruction[INSTRUCTION_LENGTH], Instr
         if (!strcmp(availableInstructions[i], operator)) {
             strcpy(into->name, operator);
 
-            if (strcmp(operator, HALT) != 0 && strcmp(operator, WRITE) != 0) {
+            if (strcmp(operator, HALT) != 0) {
                 return recoverValue(parameter, &into->parameter);
             }
 
@@ -251,27 +253,28 @@ void executeProgram(Program program) {
             continue;
         }
 
-//       TODO if (!strcmp(instruction.name, READ)) {
-//
-//            continue;
-//        }
-//
-//        if (!strcmp(instruction.name, WRITE)) {
-//
-//            continue;
-//        }
-//
-//        if (!strcmp(instruction.name, STORE)) {
-//
-//            continue;
-//        }
+        if (!strcmp(instruction.name, READ)) {
+            printf("Enter a value for variable %d: ", instruction.parameter);
+            scanf("%d", &program.variables[instruction.parameter]);
+            continue;
+        }
+
+        if (!strcmp(instruction.name, WRITE)) {
+            printf("\n%d", program.variables[instruction.parameter]);
+            continue;
+        }
+
+        if (!strcmp(instruction.name, STORE)) {
+            program.variables[instruction.parameter] = program.recorder;
+            continue;
+        }
     }
 }
 
 /**
  * Prompts the user for the program number to be executed and starts executing it, if found.
  */
-void execute() {
+void run() {
     int target = readProgramNumber();
 
     if (target != -1) {
@@ -286,10 +289,10 @@ void menu() {
     do {
         header("");
 
-        printf("1 - Editar Programa");
-        printf("\n2 - Exibir Programa");
-        printf("\n3 - Executar Programa");
-        printf("\n4 - Sair\n\n");
+        printf("1 - Edit Program");
+        printf("\n2 - Show Program");
+        printf("\n3 - Run Program");
+        printf("\n4 - Exit\n\n");
         scanf("%d", &chosen);
 
         switch (chosen) {
@@ -300,7 +303,7 @@ void menu() {
                 showPrograms();
                 break;
             case 3:
-                execute();
+                run();
                 break;
             case 4:
                 exit(0);

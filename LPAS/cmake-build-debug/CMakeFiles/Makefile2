@@ -63,10 +63,10 @@ RM = "C:\Program Files\JetBrains\CLion 2020.2.5\bin\cmake\win\bin\cmake.exe" -E 
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "F:\TSI\2nd period\LP\LPAS"
+CMAKE_SOURCE_DIR = "F:\TSI\2nd period\Operational systems\Operational-systems\LPAS"
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "F:\TSI\2nd period\LP\LPAS\cmake-build-debug"
+CMAKE_BINARY_DIR = "F:\TSI\2nd period\Operational systems\Operational-systems\LPAS\cmake-build-debug"
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -93,14 +93,14 @@ clean: CMakeFiles/LPAS.dir/clean
 CMakeFiles/LPAS.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\LPAS.dir\build.make CMakeFiles/LPAS.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\LPAS.dir\build.make CMakeFiles/LPAS.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir="F:\TSI\2nd period\LP\LPAS\cmake-build-debug\CMakeFiles" --progress-num=1,2 "Built target LPAS"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir="F:\TSI\2nd period\Operational systems\Operational-systems\LPAS\cmake-build-debug\CMakeFiles" --progress-num=1,2 "Built target LPAS"
 .PHONY : CMakeFiles/LPAS.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/LPAS.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "F:\TSI\2nd period\LP\LPAS\cmake-build-debug\CMakeFiles" 2
+	$(CMAKE_COMMAND) -E cmake_progress_start "F:\TSI\2nd period\Operational systems\Operational-systems\LPAS\cmake-build-debug\CMakeFiles" 2
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 CMakeFiles/LPAS.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start "F:\TSI\2nd period\LP\LPAS\cmake-build-debug\CMakeFiles" 0
+	$(CMAKE_COMMAND) -E cmake_progress_start "F:\TSI\2nd period\Operational systems\Operational-systems\LPAS\cmake-build-debug\CMakeFiles" 0
 .PHONY : CMakeFiles/LPAS.dir/rule
 
 # Convenience name for target.
