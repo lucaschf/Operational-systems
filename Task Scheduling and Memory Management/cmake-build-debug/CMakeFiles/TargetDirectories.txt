@@ -1,0 +1,3 @@
+F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/cmake-build-debug/CMakeFiles/Task_Scheduling_and_Memory_Management.dir
+F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/cmake-build-debug/CMakeFiles/edit_cache.dir
+F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/cmake-build-debug/CMakeFiles/rebuild_cache.dir

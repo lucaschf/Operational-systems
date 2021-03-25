@@ -1,0 +1,3 @@
+"C:\Program Files\JetBrains\CLion 2020.3.2\bin\cmake\win\bin\cmake.exe" -E rm -f CMakeFiles\Task_Scheduling_and_Memory_Management.dir/objects.a
+C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\ar.exe cr CMakeFiles\Task_Scheduling_and_Memory_Management.dir/objects.a @CMakeFiles\Task_Scheduling_and_Memory_Management.dir\objects1.rsp
+C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe -g   -Wl,--whole-archive CMakeFiles\Task_Scheduling_and_Memory_Management.dir/objects.a -Wl,--no-whole-archive  -o Task_Scheduling_and_Memory_Management.exe -Wl,--out-implib,libTask_Scheduling_and_Memory_Management.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\Task_Scheduling_and_Memory_Management.dir\linklibs.rsp
