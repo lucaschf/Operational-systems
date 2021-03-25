@@ -16,7 +16,7 @@
 typedef char Instruction[INSTRUCTION_LENGTH];
 
 typedef enum {
-    NEW, READY, RUNNING, SUSPENDED, FINISHED
+    NEW, READY, RUNNING, SUSPENDED, FINISHED, ABORTED
 } State;
 
 typedef struct {
@@ -25,10 +25,11 @@ typedef struct {
 } TimeInterval;
 
 typedef struct {
+    char* name;
     State state;
-    long cpuTime;
-    long ioTime;
-    long size_;
+    int cpuTime;
+    int ioTime;
+    int size_;
     int arrivalTime;
     int suspendedAt;
     int endTime;
@@ -114,9 +115,7 @@ TimeInterval startInterval();
 
 void endInterval(Task *task);
 
-void releaseQueues();
-
-void run();
+void stagger();
 
 int execute(Task *task, Instruction instruction);
 

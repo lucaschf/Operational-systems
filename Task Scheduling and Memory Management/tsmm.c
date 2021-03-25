@@ -3,6 +3,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
+
+// region Global variables
+QUEUE readyTasks;
+QUEUE newTasks;
+QUEUE suspendedTasks;
+QUEUE endedTasks;
+QUEUE abortedTasks;
+System system_;
+// endregion
 
 // region queue
 Queue *newQueue() {
@@ -104,11 +114,18 @@ int startsWith(const char *str, const char *prefix) {
 }
 // endregion
 
-QUEUE readyTasks;
-QUEUE newTasks;
-QUEUE suspendedTasks;
-QUEUE endedTasks;
-System system_;
+char *getTaskName(char *pathname) {
+    char *name = NULL;
+
+    if (pathname) {
+        if (contains(pathname, "/"))
+            name = strrchr(pathname, '/') + 1;
+        else
+            name = pathname;
+    }
+
+    return name;
+}
 
 void checkArgs(int argc, char **argv) {
     if (argc < 2 || argc > MAXIMUM_PARALLEL_TASKS + 1) {
@@ -132,7 +149,7 @@ void prepareTask(Task task) {
     enqueue(readyTasks, task);
 }
 
-// suspends the task execution, usually when performing a IO action
+// suspends the task execution, usually when performing an IO action
 void suspendTask(Task task) {
     task.suspendedAt = system_.currentCpuTime;
     task.state = SUSPENDED;
@@ -141,14 +158,22 @@ void suspendTask(Task task) {
     enqueue(suspendedTasks, task);
 }
 
-// ends the task, which means that the task successfully executed all instructions or was aborted due to an
-// unsupported instruction
+// ends the task, which means that the task successfully executed all instructions
 void endTask(Task task) {
     task.state = FINISHED;
     task.endTime = system_.currentCpuTime;
     task.suspendedAt = -1;
     endInterval(&task);
     enqueue(endedTasks, task);
+}
+
+// aborts the task, which means that the task has one or more unsupported instructions
+void abortTask(Task task) {
+    task.state = ABORTED;
+    task.endTime = system_.currentCpuTime;
+    task.suspendedAt = -1;
+    endInterval(&task);
+    enqueue(abortedTasks, task);
 }
 
 // sets the default values to a task and enqueue it
@@ -164,6 +189,31 @@ void createTask(Task task) {
     enqueue(newTasks, task);
 }
 
+/**
+ * Releases the allocated memory for tasks queues
+ */
+void releaseQueues() {
+    if (newTasks)
+        free(newTasks);
+
+    if (readyTasks)
+        free(readyTasks);
+
+    if (suspendedTasks)
+        free(suspendedTasks);
+
+    if (endedTasks)
+        free(endedTasks);
+
+    if (abortedTasks)
+        free(abortedTasks);
+}
+
+/**
+ * Tries to initialize the queues for tasks management
+ *
+ * @return 1 successfully initialized queues, 0 otherwise.
+ */
 int initQueues() {
     newTasks = newQueue();
     if (!newTasks)
@@ -187,21 +237,13 @@ int initQueues() {
         return 0;
     }
 
+    abortedTasks = newQueue();
+    if (!abortedTasks) {
+        releaseQueues();
+        return 0;
+    }
+
     return 1;
-}
-
-void releaseQueues() {
-    if (newTasks)
-        free(newTasks);
-
-    if (readyTasks)
-        free(readyTasks);
-
-    if (suspendedTasks)
-        free(suspendedTasks);
-
-    if (endedTasks)
-        free(endedTasks);
 }
 
 void removeFromCpu(Task *task) {
@@ -256,6 +298,9 @@ void removeFromCpu(Task *task) {
             case SUSPENDED:
                 suspendTask(*task);
                 break;
+            case ABORTED:
+                abortTask(*task);
+                break;
             default:
                 break;
         }
@@ -296,7 +341,7 @@ void extractBaseTaskData(int argc, char **argv) {
             task.size_ = getTaskSize(task.instructionsFile);
         }
 
-        // if any arg cannot be used, abort.
+        // if any argument is invalid or cannot open the file, abort.
         if (fail || task.size_ == -1) {
             for (int j = 0; j < i; j++) {
                 dequeue(newTasks, &task);
@@ -313,50 +358,49 @@ void extractBaseTaskData(int argc, char **argv) {
             exit(EXIT_FAILURE);
         }
 
+        task.name = getTaskName(argv[i]);
         createTask(task);
     }
 }
 
-void run() {
+void stagger() {
 
-    Task task;
     Instruction instruction;
+    Task task;
 
-    if (!dequeue(readyTasks, &task)) { // no task to be executed right now
-        removeFromCpu(NULL);
-        system_.currentCpuTime++;
-        return;
-    }
-
-    task.state = RUNNING;
-    for (int i = 0; i < TIME_QUANTUM; i++) {
-        if (fgets(instruction, INSTRUCTION_LENGTH, task.instructionsFile)) {
-            task.lastInstruction++;
-
-            if (strcmp(instruction, "") == 0) {
-                task.state = FINISHED;
-                continue;
-            }
-
-            execute(&task, instruction);
+    while (!isEmpty(readyTasks) || !isEmpty(suspendedTasks) || !isEmpty(newTasks)) {
+        if (!dequeue(readyTasks, &task)) { // no task to be executed right now
+            removeFromCpu(NULL);
             system_.currentCpuTime++;
-        } else
-            task.state = FINISHED;
+            continue;
+        }
 
-        if (task.state == FINISHED || task.state == SUSPENDED)
-            break;
+        task.state = RUNNING;
+        for (int i = 0; i < TIME_QUANTUM; i++) {
+            if (fgets(instruction, INSTRUCTION_LENGTH, task.instructionsFile)) {
+                removeNewline(instruction);
+
+                if (execute(&task, instruction))
+                    task.lastInstruction++;
+
+                system_.currentCpuTime++;
+            } else
+                task.state = FINISHED;
+
+            if (task.state == FINISHED || task.state == SUSPENDED)
+                break;
+        }
+
+        if (task.state == RUNNING)
+            task.state = READY;
+
+        removeFromCpu(&task);
     }
-
-    if (task.state == RUNNING)
-        task.state = READY;
-
-    removeFromCpu(&task);
 }
 
 int execute(Task *task, Instruction instruction) {
-    removeNewline(instruction);
 
-    // this is a IO execution, so we should suspend it
+    // this is a IO execution, so we should suspend the task
     if (!strcmp(instruction, "read disk")) {
         task->state = SUSPENDED;
         endInterval(task); // stop cpu interval
@@ -380,9 +424,11 @@ int execute(Task *task, Instruction instruction) {
         return 1;
     }
 
-    task->state = FINISHED;
-    printf("A tarefa %s não será executada, pois tem instruções diferentes do tipo 1, 2 e 3.",
-           task->instructionsFile->_ptr);
+    task->state = ABORTED; // is not a recognized instruction. It should be aborted
+    printf("A tarefa '%s' nao sera executada, pois tem instrucoes diferentes do tipo 1, 2 e 3.\nUltima linha executada: %d.\n",
+           task->name,
+           task->lastInstruction
+    );
     return 0;
 }
 
@@ -406,46 +452,63 @@ void endInterval(Task *task) {
     }
 }
 
-int main(int argc, char **argv) {
+void printResult() {
+    Task task;
 
-    argc = 3;
-    argv[1] = "../t1.tsk";
-    argv[2] = "../t2.tsk";
+    printf("Tempo total de CPU:  %d\n\n", system_.currentCpuTime);
+
+    while (dequeue(endedTasks, &task)) {
+        int tt = task.endTime - task.arrivalTime;
+
+        printf(">> %s\n", task.name);
+        printf("\n\tInstante de finalizacao: %d", task.endTime);
+        printf("\n\tTurn around time: %d", tt);
+        printf("\n\tWait time: %d",  tt - task.cpuTime);
+        printf("\n\tResponse time: %d",  task.cpuInterval[0].start - task.arrivalTime);
+
+        printf("\n\n\tProcessador: \n");
+        for (int i = 0; i < task.cpuUsageTimes; i++)
+            printf("\t\t%d a %d ut\n", task.cpuInterval[i].start, task.cpuInterval[i].end);
+
+        printf("\tDisco: \n");
+        if (task.suspendedTimes)
+            for (int i = 0; i < task.suspendedTimes; i++)
+                printf("\t\t%d a %d ut\n", task.ioInterval[i].start, task.ioInterval[i].end);
+        else
+            printf("\t\tNenhum acesso a disco realizado\n\n");
+    }
+}
+
+void run(int argc, char **argv) {
+    Task task;
 
     checkArgs(argc, argv);
-    Task runningTask;
+
+    setlocale(LC_ALL, "Portuguese");
 
     if (!initQueues()) {
         printf("Failed to initialize");
         exit(EXIT_FAILURE);
     }
 
-    extractBaseTaskData(argc, argv);
-
     system_.currentCpuTime = 0;
 
-    if (dequeue(newTasks, &runningTask))
-        prepareTask(runningTask);
+    extractBaseTaskData(argc, argv);
 
-    do {
-        run();
-    } while (!isEmpty(readyTasks) || !isEmpty(suspendedTasks) || !isEmpty(newTasks));
+    if (dequeue(newTasks, &task))
+        prepareTask(task);
 
-    printf("\nCPU TIME %d\n", system_.currentCpuTime);
-
-    while (dequeue(endedTasks, &runningTask)) {
-        printf("PROCESSADOR: \n");
-        for (int i = 0; i < runningTask.cpuUsageTimes; i++) {
-            printf("\t%d a %d ut\n", runningTask.cpuInterval[i].start, runningTask.cpuInterval[i].end);
-        }
-
-        printf("IO: \n");
-        for (int i = 0; i < runningTask.suspendedTimes; i++) {
-            printf("\t%d a %d ut\n", runningTask.ioInterval[i].start, runningTask.ioInterval[i].end);
-        }
-    }
-
+    stagger();
+    printResult();
     releaseQueues();
+}
 
+int main(int argc, char **argv) {
+
+    argc = 3;
+    argv[1] = "../t1.tsk";
+    argv[2] = "../t2.tsk";
+
+    run(argc, argv);
     return 0;
 }
