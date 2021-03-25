@@ -4,8 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/queue.c" "F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/cmake-build-debug/CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.obj"
-  "F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/tsmm.c" "F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/cmake-build-debug/CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj"
+  "F:/TSI/2nd period/Operational systems/Operational-systems/Task Scheduling and Memory Management/tsmm.c" "F:/TSI/2nd period/Operational systems/Operational-systems/Task Scheduling and Memory Management/cmake-build-debug/CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 

@@ -67,10 +67,10 @@ RM = "C:\Program Files\JetBrains\CLion 2020.3.2\bin\cmake\win\bin\cmake.exe" -E 
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management"
+CMAKE_SOURCE_DIR = "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management"
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug"
+CMAKE_BINARY_DIR = "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug"
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -99,9 +99,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles\progress.marks"
+	$(CMAKE_COMMAND) -E cmake_progress_start "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles\progress.marks"
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" 0
+	$(CMAKE_COMMAND) -E cmake_progress_start "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" 0
 .PHONY : all
 
 # The main clean target
@@ -142,33 +142,6 @@ Task_Scheduling_and_Memory_Management/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Task_Scheduling_and_Memory_Management.dir\build.make CMakeFiles/Task_Scheduling_and_Memory_Management.dir/build
 .PHONY : Task_Scheduling_and_Memory_Management/fast
 
-queue.obj: queue.c.obj
-
-.PHONY : queue.obj
-
-# target to build an object file
-queue.c.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Task_Scheduling_and_Memory_Management.dir\build.make CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.obj
-.PHONY : queue.c.obj
-
-queue.i: queue.c.i
-
-.PHONY : queue.i
-
-# target to preprocess a source file
-queue.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Task_Scheduling_and_Memory_Management.dir\build.make CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.i
-.PHONY : queue.c.i
-
-queue.s: queue.c.s
-
-.PHONY : queue.s
-
-# target to generate assembly for a file
-queue.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Task_Scheduling_and_Memory_Management.dir\build.make CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.s
-.PHONY : queue.c.s
-
 tsmm.obj: tsmm.c.obj
 
 .PHONY : tsmm.obj
@@ -205,9 +178,6 @@ help:
 	@echo ... edit_cache
 	@echo ... rebuild_cache
 	@echo ... Task_Scheduling_and_Memory_Management
-	@echo ... queue.obj
-	@echo ... queue.i
-	@echo ... queue.s
 	@echo ... tsmm.obj
 	@echo ... tsmm.i
 	@echo ... tsmm.s

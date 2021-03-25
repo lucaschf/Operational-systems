@@ -1,0 +1,5 @@
+#T=150
+v new 100
+v[0]
+read disk
+v[50]

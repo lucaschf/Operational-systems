@@ -7,7 +7,7 @@
 #define TIME_QUANTUM 2
 #define INSTRUCTION_LENGTH 50
 #define MAXIMUM_PARALLEL_TASKS 4
-#define TASK_SIZE_DELIMITER "#T"
+#define TASK_SIZE_DELIMITER "#T="
 
 #define MAX_QUEUE_SIZE 100
 #define IO_SUSPENSION_TIME 5
@@ -20,6 +20,11 @@ typedef enum {
 } State;
 
 typedef struct {
+    int start;
+    int end;
+} TimeInterval;
+
+typedef struct {
     State state;
     long cpuTime;
     long ioTime;
@@ -27,8 +32,12 @@ typedef struct {
     int arrivalTime;
     int suspendedAt;
     int endTime;
-    int lastInstruction;
-    FILE *instructionsFile;
+    int lastInstruction; // counts the successful performed instruction
+    FILE *instructionsFile; // file that contains task instruction
+    int suspendedTimes;
+    TimeInterval ioInterval[MAX_QUEUE_SIZE];
+    int cpuUsageTimes;
+    TimeInterval cpuInterval[MAX_QUEUE_SIZE];
 } Task;
 
 typedef struct {
@@ -62,7 +71,7 @@ int dequeue(Queue *queue, Task *task);
 
 // endregion
 
-// region utils
+// region string utils
 
 /**
  * Returns 1 if and only if the string contains the specified
@@ -84,6 +93,13 @@ int contains(const char *str, const char *another);
 int endsWith(const char *s, const char *suffix);
 
 /**
+ * Removes trailing newline of a given string
+ *
+ * @param str
+ */
+void removeNewline(char *str);
+
+/**
  * Checks whether the string is starting with user-specified substring or not. Based on this comparison it will return 1 or 0.
  *
  * @param s the string to be checked.
@@ -94,10 +110,14 @@ int startsWith(const char *str, const char *prefix);
 
 // endregion
 
+TimeInterval startInterval();
+
+void endInterval(Task *task);
+
 void releaseQueues();
 
 void run();
 
-void execute(Task *task, Instruction instruction);
+int execute(Task *task, Instruction instruction);
 
 #endif //TASK_SCHEDULING_AND_MEMORY_MANAGEMENT_TSMM_H

@@ -1,5 +1,4 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.obj"
   "CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj"
   "Task_Scheduling_and_Memory_Management.exe"
   "Task_Scheduling_and_Memory_Management.exe.manifest"

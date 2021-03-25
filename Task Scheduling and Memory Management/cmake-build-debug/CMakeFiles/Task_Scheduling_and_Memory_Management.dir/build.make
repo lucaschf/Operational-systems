@@ -62,10 +62,10 @@ RM = "C:\Program Files\JetBrains\CLion 2020.3.2\bin\cmake\win\bin\cmake.exe" -E 
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management"
+CMAKE_SOURCE_DIR = "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management"
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug"
+CMAKE_BINARY_DIR = "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug"
 
 # Include any dependencies generated for this target.
 include CMakeFiles/Task_Scheduling_and_Memory_Management.dir/depend.make
@@ -78,45 +78,30 @@ include CMakeFiles/Task_Scheduling_and_Memory_Management.dir/flags.make
 
 CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj: CMakeFiles/Task_Scheduling_and_Memory_Management.dir/flags.make
 CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj: ../tsmm.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles\Task_Scheduling_and_Memory_Management.dir\tsmm.c.obj   -c "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\tsmm.c"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj"
+	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles\Task_Scheduling_and_Memory_Management.dir\tsmm.c.obj   -c "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\tsmm.c"
 
 CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.i"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\tsmm.c" > CMakeFiles\Task_Scheduling_and_Memory_Management.dir\tsmm.c.i
+	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\tsmm.c" > CMakeFiles\Task_Scheduling_and_Memory_Management.dir\tsmm.c.i
 
 CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.s"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\tsmm.c" -o CMakeFiles\Task_Scheduling_and_Memory_Management.dir\tsmm.c.s
-
-CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.obj: CMakeFiles/Task_Scheduling_and_Memory_Management.dir/flags.make
-CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.obj: ../queue.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.obj"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles\Task_Scheduling_and_Memory_Management.dir\queue.c.obj   -c "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\queue.c"
-
-CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.i"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\queue.c" > CMakeFiles\Task_Scheduling_and_Memory_Management.dir\queue.c.i
-
-CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.s"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\queue.c" -o CMakeFiles\Task_Scheduling_and_Memory_Management.dir\queue.c.s
+	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\tsmm.c" -o CMakeFiles\Task_Scheduling_and_Memory_Management.dir\tsmm.c.s
 
 # Object files for target Task_Scheduling_and_Memory_Management
 Task_Scheduling_and_Memory_Management_OBJECTS = \
-"CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj" \
-"CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.obj"
+"CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj"
 
 # External object files for target Task_Scheduling_and_Memory_Management
 Task_Scheduling_and_Memory_Management_EXTERNAL_OBJECTS =
 
 Task_Scheduling_and_Memory_Management.exe: CMakeFiles/Task_Scheduling_and_Memory_Management.dir/tsmm.c.obj
-Task_Scheduling_and_Memory_Management.exe: CMakeFiles/Task_Scheduling_and_Memory_Management.dir/queue.c.obj
 Task_Scheduling_and_Memory_Management.exe: CMakeFiles/Task_Scheduling_and_Memory_Management.dir/build.make
 Task_Scheduling_and_Memory_Management.exe: CMakeFiles/Task_Scheduling_and_Memory_Management.dir/linklibs.rsp
 Task_Scheduling_and_Memory_Management.exe: CMakeFiles/Task_Scheduling_and_Memory_Management.dir/objects1.rsp
 Task_Scheduling_and_Memory_Management.exe: CMakeFiles/Task_Scheduling_and_Memory_Management.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir="F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_3) "Linking C executable Task_Scheduling_and_Memory_Management.exe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir="F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Linking C executable Task_Scheduling_and_Memory_Management.exe"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles\Task_Scheduling_and_Memory_Management.dir\link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -129,6 +114,6 @@ CMakeFiles/Task_Scheduling_and_Memory_Management.dir/clean:
 .PHONY : CMakeFiles/Task_Scheduling_and_Memory_Management.dir/clean
 
 CMakeFiles/Task_Scheduling_and_Memory_Management.dir/depend:
-	$(CMAKE_COMMAND) -E cmake_depends "MinGW Makefiles" "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management" "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management" "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug" "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug" "F:\TSI\2nd period\Operational systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles\Task_Scheduling_and_Memory_Management.dir\DependInfo.cmake" --color=$(COLOR)
+	$(CMAKE_COMMAND) -E cmake_depends "MinGW Makefiles" "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management" "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management" "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug" "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug" "F:\TSI\2nd period\Operational systems\Operational-systems\Task Scheduling and Memory Management\cmake-build-debug\CMakeFiles\Task_Scheduling_and_Memory_Management.dir\DependInfo.cmake" --color=$(COLOR)
 .PHONY : CMakeFiles/Task_Scheduling_and_Memory_Management.dir/depend
 

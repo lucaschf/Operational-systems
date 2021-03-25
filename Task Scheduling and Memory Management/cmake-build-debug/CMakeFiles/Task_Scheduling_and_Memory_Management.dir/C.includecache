@@ -6,9 +6,9 @@
 
 #IncludeRegexTransform: 
 
-F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/tsmm.c
+F:/TSI/2nd period/Operational systems/Operational-systems/Task Scheduling and Memory Management/tsmm.c
 tsmm.h
-F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/tsmm.h
+F:/TSI/2nd period/Operational systems/Operational-systems/Task Scheduling and Memory Management/tsmm.h
 stdio.h
 -
 stdlib.h
@@ -16,7 +16,7 @@ stdlib.h
 string.h
 -
 
-F:/TSI/2nd period/Operational systems/Task Scheduling and Memory Management/tsmm.h
+F:/TSI/2nd period/Operational systems/Operational-systems/Task Scheduling and Memory Management/tsmm.h
 stdlib.h
 -
 stdio.h

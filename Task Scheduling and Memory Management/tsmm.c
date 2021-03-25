@@ -69,7 +69,7 @@ int dequeue(Queue *queue, Task *task) {
 }
 //endregion
 
-// region utils
+// region string utils
 
 int contains(const char *str, const char *another) {
     return strstr(str, another) != NULL;
@@ -89,39 +89,26 @@ int endsWith(const char *s, const char *suffix) {
     return !strcmp(suffix, anotherComparator);
 }
 
+void removeNewline(char *str) {
+    if (str == NULL)
+        return;
+
+    unsigned int length = strlen(str);
+
+    if (str[length - 1] == '\n')
+        str[length - 1] = '\0';
+}
+
 int startsWith(const char *str, const char *prefix) {
     return strncmp(prefix, str, strlen(prefix)) == 0;
 }
 // endregion
-
-int getTaskSize(FILE *f) {
-    rewind(f);
-
-    char line[50];
-
-    if (fgets(line, 50, f)) {
-        char *token = strtok(line, "=");
-
-        if (token) {
-            if (strcmp(TASK_SIZE_DELIMITER, token) != 0)
-                return -1;
-
-            token = strtok(NULL, "=");
-
-            if (token)
-                return atoi(token);
-        }
-    }
-
-    return -1;
-}
 
 QUEUE readyTasks;
 QUEUE newTasks;
 QUEUE suspendedTasks;
 QUEUE endedTasks;
 System system_;
-
 
 void checkArgs(int argc, char **argv) {
     if (argc < 2 || argc > MAXIMUM_PARALLEL_TASKS + 1) {
@@ -137,33 +124,43 @@ void checkArgs(int argc, char **argv) {
     }
 }
 
-void enqueueReady(Task task) {
+// prepare a task to be executed
+void prepareTask(Task task) {
     task.state = READY;
     task.suspendedAt = -1;
+    endInterval(&task);
     enqueue(readyTasks, task);
 }
 
-void enqueueSuspended(Task task) {
+// suspends the task execution, usually when performing a IO action
+void suspendTask(Task task) {
     task.suspendedAt = system_.currentCpuTime;
     task.state = SUSPENDED;
     task.ioTime += IO_SUSPENSION_TIME;
+    task.ioInterval[task.suspendedTimes] = startInterval();
     enqueue(suspendedTasks, task);
 }
 
-void enqueueDone(Task task) {
+// ends the task, which means that the task successfully executed all instructions or was aborted due to an
+// unsupported instruction
+void endTask(Task task) {
     task.state = FINISHED;
-    task.suspendedAt = -1;
     task.endTime = system_.currentCpuTime;
+    task.suspendedAt = -1;
+    endInterval(&task);
     enqueue(endedTasks, task);
 }
 
-void enqueueNew(Task task) {
+// sets the default values to a task and enqueue it
+void createTask(Task task) {
     task.state = NEW;
     task.suspendedAt = -1;
     task.endTime = -1;
     task.lastInstruction = 0;
     task.ioTime = 0;
     task.cpuTime = 0;
+    task.suspendedTimes = 0;
+    task.cpuUsageTimes = 0;
     enqueue(newTasks, task);
 }
 
@@ -174,22 +171,19 @@ int initQueues() {
 
     readyTasks = newQueue();
     if (!readyTasks) {
-        free(newTasks);
+        releaseQueues();
         return 0;
     }
 
     suspendedTasks = newQueue();
     if (!suspendedTasks) {
-        free(newTasks);
-        free(readyTasks);
+        releaseQueues();
         return 0;
     }
 
     endedTasks = newQueue();
     if (!endedTasks) {
-        free(newTasks);
-        free(readyTasks);
-        free(suspendedTasks);
+        releaseQueues();
         return 0;
     }
 
@@ -197,10 +191,17 @@ int initQueues() {
 }
 
 void releaseQueues() {
-    free(newTasks);
-    free(readyTasks);
-    free(suspendedTasks);
-    free(endedTasks);
+    if (newTasks)
+        free(newTasks);
+
+    if (readyTasks)
+        free(readyTasks);
+
+    if (suspendedTasks)
+        free(suspendedTasks);
+
+    if (endedTasks)
+        free(endedTasks);
 }
 
 void removeFromCpu(Task *task) {
@@ -218,39 +219,42 @@ void removeFromCpu(Task *task) {
         }
     }
 
-    if (hasSuspended) { // there are suspended tasks, so we have to check if the suspension time is already passed.
+    // there are suspended tasks, so we have to check if the suspension time is already passed.
+    if (hasSuspended) {
         if (suspended.suspendedAt + IO_SUSPENSION_TIME <= system_.currentCpuTime) {
             dequeue(suspendedTasks, &suspended);
+            endInterval(&suspended);
         } else
             hasSuspended = 0;
     }
 
-    // new tasks have priority over suspended tasks. Suspended tasks have priority over current running tasks.
+    // new tasks have priority over suspended tasks.
+    // Suspended tasks have priority over current running tasks.
     if (hasNew && hasSuspended) {
         if (suspended.suspendedAt + IO_SUSPENSION_TIME <= arrivedTask.arrivalTime) {
-            enqueueReady(suspended);
-            enqueueReady(arrivedTask);
+            prepareTask(suspended);
+            prepareTask(arrivedTask);
         } else {
-            enqueueReady(arrivedTask);
-            enqueueReady(suspended);
+            prepareTask(arrivedTask);
+            prepareTask(suspended);
         }
     } else {
         if (hasNew)
-            enqueueReady(arrivedTask);
+            prepareTask(arrivedTask);
         if (hasSuspended)
-            enqueueReady(suspended);
+            prepareTask(suspended);
     }
 
-    if(task) {
+    if (task) {
         switch (task->state) {
             case READY:
-                enqueueReady(*task);
+                prepareTask(*task);
                 break;
             case FINISHED:
-                enqueueDone(*task);
+                endTask(*task);
                 break;
             case SUSPENDED:
-                enqueueSuspended(*task);
+                suspendTask(*task);
                 break;
             default:
                 break;
@@ -258,11 +262,31 @@ void removeFromCpu(Task *task) {
     }
 }
 
-void extractTasks(int argc, char **argv) {
+int getTaskSize(FILE *f) {
+    const size_t length = 50;
+    char line[length];
+
+    rewind(f);
+
+    if (!fgets(line, length, f) || !startsWith(line, TASK_SIZE_DELIMITER)) {
+        return -1;
+    }
+
+    char *token = strtok(line, TASK_SIZE_DELIMITER);
+
+    if (token) {
+        return atoi(token); // NOLINT(cert-err34-c)
+    }
+
+    return -1;
+}
+
+void extractBaseTaskData(int argc, char **argv) {
     int fail;
 
     for (int i = 1; i < argc; i++) {
         Task task;
+
         task.arrivalTime = i - 1;
         task.instructionsFile = fopen(argv[i], "r");
 
@@ -272,6 +296,7 @@ void extractTasks(int argc, char **argv) {
             task.size_ = getTaskSize(task.instructionsFile);
         }
 
+        // if any arg cannot be used, abort.
         if (fail || task.size_ == -1) {
             for (int j = 0; j < i; j++) {
                 dequeue(newTasks, &task);
@@ -279,6 +304,7 @@ void extractTasks(int argc, char **argv) {
             }
 
             releaseQueues();
+
             if (fail) {
                 printf("Unable to open task file: %s\n", argv[i]);
             } else
@@ -286,15 +312,105 @@ void extractTasks(int argc, char **argv) {
 
             exit(EXIT_FAILURE);
         }
-        enqueueNew(task);
+
+        createTask(task);
     }
 }
 
+void run() {
+
+    Task task;
+    Instruction instruction;
+
+    if (!dequeue(readyTasks, &task)) { // no task to be executed right now
+        removeFromCpu(NULL);
+        system_.currentCpuTime++;
+        return;
+    }
+
+    task.state = RUNNING;
+    for (int i = 0; i < TIME_QUANTUM; i++) {
+        if (fgets(instruction, INSTRUCTION_LENGTH, task.instructionsFile)) {
+            task.lastInstruction++;
+
+            if (strcmp(instruction, "") == 0) {
+                task.state = FINISHED;
+                continue;
+            }
+
+            execute(&task, instruction);
+            system_.currentCpuTime++;
+        } else
+            task.state = FINISHED;
+
+        if (task.state == FINISHED || task.state == SUSPENDED)
+            break;
+    }
+
+    if (task.state == RUNNING)
+        task.state = READY;
+
+    removeFromCpu(&task);
+}
+
+int execute(Task *task, Instruction instruction) {
+    removeNewline(instruction);
+
+    // this is a IO execution, so we should suspend it
+    if (!strcmp(instruction, "read disk")) {
+        task->state = SUSPENDED;
+        endInterval(task); // stop cpu interval
+        return 1;
+    }
+
+    if (contains(instruction, "new")) {
+        // TODO
+        if (task->cpuInterval[task->cpuUsageTimes].end != -1)
+            task->cpuInterval[task->cpuUsageTimes] = startInterval();
+        task->cpuTime++;
+        return 1;
+    }
+
+    if (contains(instruction, "[")) {
+        // TODO
+        if (task->cpuInterval[task->cpuUsageTimes].end != -1)
+            task->cpuInterval[task->cpuUsageTimes] = startInterval();
+
+        task->cpuTime++;
+        return 1;
+    }
+
+    task->state = FINISHED;
+    printf("A tarefa %s não será executada, pois tem instruções diferentes do tipo 1, 2 e 3.",
+           task->instructionsFile->_ptr);
+    return 0;
+}
+
+TimeInterval startInterval() {
+    TimeInterval interval;
+    interval.start = system_.currentCpuTime;
+    interval.end = -1;
+
+    return interval;
+}
+
+void endInterval(Task *task) {
+    if (task->cpuInterval[task->cpuUsageTimes].end == -1) {
+        task->cpuInterval[task->cpuUsageTimes].end = system_.currentCpuTime;
+        task->cpuUsageTimes++;
+    }
+
+    if (task->ioInterval[task->suspendedTimes].end == -1) {
+        task->ioInterval[task->suspendedTimes].end = system_.currentCpuTime;
+        task->suspendedTimes++;
+    }
+}
 
 int main(int argc, char **argv) {
 
-    argc = 2;
+    argc = 3;
     argv[1] = "../t1.tsk";
+    argv[2] = "../t2.tsk";
 
     checkArgs(argc, argv);
     Task runningTask;
@@ -304,61 +420,32 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    extractTasks(argc, argv);
+    extractBaseTaskData(argc, argv);
 
     system_.currentCpuTime = 0;
 
     if (dequeue(newTasks, &runningTask))
-        enqueueReady(runningTask);
+        prepareTask(runningTask);
 
     do {
         run();
     } while (!isEmpty(readyTasks) || !isEmpty(suspendedTasks) || !isEmpty(newTasks));
 
-    printf("CPU TIME %d", system_.currentCpuTime);
+    printf("\nCPU TIME %d\n", system_.currentCpuTime);
+
+    while (dequeue(endedTasks, &runningTask)) {
+        printf("PROCESSADOR: \n");
+        for (int i = 0; i < runningTask.cpuUsageTimes; i++) {
+            printf("\t%d a %d ut\n", runningTask.cpuInterval[i].start, runningTask.cpuInterval[i].end);
+        }
+
+        printf("IO: \n");
+        for (int i = 0; i < runningTask.suspendedTimes; i++) {
+            printf("\t%d a %d ut\n", runningTask.ioInterval[i].start, runningTask.ioInterval[i].end);
+        }
+    }
 
     releaseQueues();
 
     return 0;
-}
-
-void run() {
-    Task runningTask;
-    Instruction instruction;
-
-    if (dequeue(readyTasks, &runningTask)) {
-        for (int i = 0; i < TIME_QUANTUM && runningTask.state != FINISHED && runningTask.state != SUSPENDED; i++) {
-            if (fgets(instruction, INSTRUCTION_LENGTH, runningTask.instructionsFile)) {
-                runningTask.lastInstruction++;
-                if (strcmp(instruction, "") == 0) {
-                    runningTask.state = FINISHED;
-                } else {
-                    system_.currentCpuTime++;
-                    execute(&runningTask, instruction);
-                }
-            }else
-                runningTask.state = FINISHED;
-        }
-
-        removeFromCpu(&runningTask);
-    } else{
-        removeFromCpu(NULL);
-        system_.currentCpuTime++;
-    }
-}
-
-void execute(Task *task, Instruction instruction) {
-    if (!strcmp(instruction, "read disk")) {
-        task->suspendedAt = system_.currentCpuTime;
-        task->state = SUSPENDED;
-        task->ioTime += IO_SUSPENSION_TIME;
-    }
-
-    if (contains(instruction, "new")) {
-        task->cpuTime++;
-    }
-
-    if (contains(instruction, "[")) {
-        task->cpuTime++;
-    }
 }
