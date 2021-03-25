@@ -375,10 +375,17 @@ void stagger() {
             continue;
         }
 
+        long temp;
+
         task.state = RUNNING;
         for (int i = 0; i < TIME_QUANTUM; i++) {
             if (fgets(instruction, INSTRUCTION_LENGTH, task.instructionsFile)) {
                 removeNewline(instruction);
+
+                if (!strcmp(instruction, "")) {
+                    task.state = FINISHED;
+                    continue;
+                }
 
                 if (execute(&task, instruction))
                     task.lastInstruction++;
@@ -391,8 +398,20 @@ void stagger() {
                 break;
         }
 
-        if (task.state == RUNNING)
-            task.state = READY;
+        if (task.state == RUNNING) {
+            temp = ftell(task.instructionsFile);
+            if (!fgets(instruction, INSTRUCTION_LENGTH, task.instructionsFile))
+                task.state = FINISHED;
+            else {
+                removeNewline(instruction);
+                if (!strcmp(instruction, "")) {
+                    task.state = FINISHED;
+                } else {
+                    fseek(task.instructionsFile, temp, SEEK_SET);
+                    task.state = READY;
+                }
+            }
+        }
 
         removeFromCpu(&task);
     }
@@ -463,8 +482,8 @@ void printResult() {
         printf(">> %s\n", task.name);
         printf("\n\tInstante de finalizacao: %d", task.endTime);
         printf("\n\tTurn around time: %d", tt);
-        printf("\n\tWait time: %d",  tt - task.cpuTime);
-        printf("\n\tResponse time: %d",  task.cpuInterval[0].start - task.arrivalTime);
+        printf("\n\tWait time: %d", tt - task.cpuTime);
+        printf("\n\tResponse time: %d", task.cpuInterval[0].start - task.arrivalTime);
 
         printf("\n\n\tProcessador: \n");
         for (int i = 0; i < task.cpuUsageTimes; i++)
