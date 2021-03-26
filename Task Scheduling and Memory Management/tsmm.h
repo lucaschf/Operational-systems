@@ -9,7 +9,7 @@
 #define MAXIMUM_PARALLEL_TASKS 4
 #define TASK_SIZE_DELIMITER "#T="
 
-#define MAX_QUEUE_SIZE 100
+#define MAX_QUEUE_SIZE 300
 #define IO_SUSPENSION_TIME 5
 #define MAX_TASK_SIZE 4000 // bytes
 
@@ -118,5 +118,13 @@ void endInterval(Task *task);
 void stagger();
 
 int execute(Task *task, Instruction instruction);
+
+/**
+ * Checks whether the task reached its last instruction or not
+ *
+ * @param task the task to be verified
+ * @return 1 if last instruction is reached, 0 otherwise
+ */
+int reachedLastInstruction(Task *task);
 
 #endif //TASK_SCHEDULING_AND_MEMORY_MANAGEMENT_TSMM_H

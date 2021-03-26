@@ -33,7 +33,7 @@ int enqueue(Queue *queue, Task task) {
     if (queue->front == -1)
         queue->front = 0;
 
-    if (queue->rear == MAX_QUEUE_SIZE - 1)/*rear is at last position of queue*/
+    if (queue->rear == MAX_QUEUE_SIZE - 1)// rear is at last position of queue
         queue->rear = 0;
     else
         queue->rear++;
@@ -154,6 +154,7 @@ void suspendTask(Task task) {
     task.suspendedAt = system_.currentCpuTime;
     task.state = SUSPENDED;
     task.ioTime += IO_SUSPENSION_TIME;
+    endInterval(&task);
     task.ioInterval[task.suspendedTimes] = startInterval();
     enqueue(suspendedTasks, task);
 }
@@ -163,6 +164,7 @@ void endTask(Task task) {
     task.state = FINISHED;
     task.endTime = system_.currentCpuTime;
     task.suspendedAt = -1;
+    fclose(task.instructionsFile);
     endInterval(&task);
     enqueue(endedTasks, task);
 }
@@ -172,6 +174,7 @@ void abortTask(Task task) {
     task.state = ABORTED;
     task.endTime = system_.currentCpuTime;
     task.suspendedAt = -1;
+    fclose(task.instructionsFile);
     endInterval(&task);
     enqueue(abortedTasks, task);
 }
@@ -254,11 +257,8 @@ void removeFromCpu(Task *task) {
     int hasSuspended = peek(suspendedTasks, &suspended); // check for suspended tasks
 
     if (hasNew) { // there are new tasks. So we should check for the arrival time
-        hasNew = arrivedTask.arrivalTime <= system_.currentCpuTime;
-
-        if (hasNew) {
-            dequeue(newTasks, &arrivedTask);
-        }
+        hasNew = arrivedTask.arrivalTime <= system_.currentCpuTime &&
+                 dequeue(newTasks, &arrivedTask);
     }
 
     // there are suspended tasks, so we have to check if the suspension time is already passed.
@@ -274,17 +274,30 @@ void removeFromCpu(Task *task) {
     // Suspended tasks have priority over current running tasks.
     if (hasNew && hasSuspended) {
         if (suspended.suspendedAt + IO_SUSPENSION_TIME <= arrivedTask.arrivalTime) {
-            prepareTask(suspended);
+            if (!reachedLastInstruction(&suspended)) {
+                prepareTask(suspended);
+            } else {
+                endTask(suspended);
+            }
             prepareTask(arrivedTask);
         } else {
             prepareTask(arrivedTask);
-            prepareTask(suspended);
+            if (!reachedLastInstruction(&suspended)) {
+                prepareTask(suspended);
+            } else {
+                endTask(suspended);
+            }
         }
     } else {
         if (hasNew)
             prepareTask(arrivedTask);
-        if (hasSuspended)
-            prepareTask(suspended);
+        if (hasSuspended) {
+            if (!reachedLastInstruction(&suspended)) {
+                prepareTask(suspended);
+            } else {
+                endTask(suspended);
+            }
+        }
     }
 
     if (task) {
@@ -337,6 +350,7 @@ void extractBaseTaskData(int argc, char **argv) {
 
         fail = !task.instructionsFile;
 
+
         if (!fail) {
             task.size_ = getTaskSize(task.instructionsFile);
         }
@@ -359,8 +373,31 @@ void extractBaseTaskData(int argc, char **argv) {
         }
 
         task.name = getTaskName(argv[i]);
+
         createTask(task);
     }
+}
+
+int reachedLastInstruction(Task *task) {
+    Instruction instruction;
+
+    // Stores the current position of the file pointer
+    size_t temp = ftell(task->instructionsFile);
+
+    // not reading a line means that there is nothing else in the file, that is, there are no further instructions
+    if (!fgets(instruction, INSTRUCTION_LENGTH, task->instructionsFile)) {
+        return 1;
+    }
+
+    // A line has been read, we must check if it is empty, which signals the end of the instructions
+    removeNewline(instruction);
+    if (!strcmp(instruction, "")) {
+        return 1;
+    }
+
+    // The line is not empty, potentially being a new instruction. Therefore, we must move the file pointer backwards
+    fseek(task->instructionsFile, temp, SEEK_SET);
+    return 0;
 }
 
 void stagger() {
@@ -375,42 +412,38 @@ void stagger() {
             continue;
         }
 
-        long temp;
-
         task.state = RUNNING;
         for (int i = 0; i < TIME_QUANTUM; i++) {
-            if (fgets(instruction, INSTRUCTION_LENGTH, task.instructionsFile)) {
-                removeNewline(instruction);
-
-                if (!strcmp(instruction, "")) {
-                    task.state = FINISHED;
-                    continue;
-                }
-
-                if (execute(&task, instruction))
-                    task.lastInstruction++;
-
-                system_.currentCpuTime++;
-            } else
+            if (!fgets(instruction, INSTRUCTION_LENGTH, task.instructionsFile)) {
                 task.state = FINISHED;
+                break;
+            }
+
+            removeNewline(instruction);
+
+            if (!strcmp(instruction, "")) {
+                task.state = FINISHED;
+                break;
+            }
+
+            if (execute(&task, instruction))
+                task.lastInstruction++;
+            else {
+                printf("A tarefa '%s' nao sera executada, pois tem instrucoes diferentes do tipo 1, 2 e 3."
+                       "\nUltima linha executada: %d.\n",
+                       task.name,
+                       task.lastInstruction
+                );
+            }
+
+            system_.currentCpuTime++;
 
             if (task.state == FINISHED || task.state == SUSPENDED)
                 break;
         }
 
         if (task.state == RUNNING) {
-            temp = ftell(task.instructionsFile);
-            if (!fgets(instruction, INSTRUCTION_LENGTH, task.instructionsFile))
-                task.state = FINISHED;
-            else {
-                removeNewline(instruction);
-                if (!strcmp(instruction, "")) {
-                    task.state = FINISHED;
-                } else {
-                    fseek(task.instructionsFile, temp, SEEK_SET);
-                    task.state = READY;
-                }
-            }
+            task.state = reachedLastInstruction(&task) ? FINISHED : READY;
         }
 
         removeFromCpu(&task);
@@ -443,11 +476,8 @@ int execute(Task *task, Instruction instruction) {
         return 1;
     }
 
-    task->state = ABORTED; // is not a recognized instruction. It should be aborted
-    printf("A tarefa '%s' nao sera executada, pois tem instrucoes diferentes do tipo 1, 2 e 3.\nUltima linha executada: %d.\n",
-           task->name,
-           task->lastInstruction
-    );
+    // is not a recognized instruction. The task should be aborted
+    task->state = ABORTED;
     return 0;
 }
 
@@ -460,13 +490,17 @@ TimeInterval startInterval() {
 }
 
 void endInterval(Task *task) {
-    if (task->cpuInterval[task->cpuUsageTimes].end == -1) {
-        task->cpuInterval[task->cpuUsageTimes].end = system_.currentCpuTime;
+    TimeInterval *interval;
+
+    interval = &(task->cpuInterval[task->cpuUsageTimes]);
+    if (interval->end == -1) {
+        interval->end = system_.currentCpuTime;
         task->cpuUsageTimes++;
     }
 
-    if (task->ioInterval[task->suspendedTimes].end == -1) {
-        task->ioInterval[task->suspendedTimes].end = system_.currentCpuTime;
+    interval = &(task->ioInterval[task->suspendedTimes]);
+    if (interval->end == -1) {
+        interval->end = system_.currentCpuTime;
         task->suspendedTimes++;
     }
 }
@@ -481,6 +515,9 @@ void printResult() {
 
         printf(">> %s\n", task.name);
         printf("\n\tInstante de finalizacao: %d", task.endTime);
+        printf("\n\tInstante de chegada: %d", task.arrivalTime);
+        printf("\n\tTempo de cpu: %d", task.cpuTime);
+        printf("\n\tTempo de disco: %d", task.ioTime);
         printf("\n\tTurn around time: %d", tt);
         printf("\n\tWait time: %d", tt - task.cpuTime);
         printf("\n\tResponse time: %d", task.cpuInterval[0].start - task.arrivalTime);
@@ -501,21 +538,19 @@ void printResult() {
 void run(int argc, char **argv) {
     Task task;
 
+    system_.currentCpuTime = 0;
     checkArgs(argc, argv);
-
-    setlocale(LC_ALL, "Portuguese");
 
     if (!initQueues()) {
         printf("Failed to initialize");
         exit(EXIT_FAILURE);
     }
 
-    system_.currentCpuTime = 0;
-
     extractBaseTaskData(argc, argv);
 
-    if (dequeue(newTasks, &task))
+    if (dequeue(newTasks, &task)) {
         prepareTask(task);
+    }
 
     stagger();
     printResult();
@@ -524,9 +559,13 @@ void run(int argc, char **argv) {
 
 int main(int argc, char **argv) {
 
-    argc = 3;
+    setlocale(LC_ALL, "Portuguese");
+
+    argc = 5;
     argv[1] = "../t1.tsk";
     argv[2] = "../t2.tsk";
+    argv[3] = "../t3.tsk";
+    argv[4] = "../t4.tsk";
 
     run(argc, argv);
     return 0;
