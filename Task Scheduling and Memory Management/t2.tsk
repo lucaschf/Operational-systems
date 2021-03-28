@@ -1,6 +1,6 @@
 #T=150
-v new 100
+v new 300
 v[0]
 v[50]
 read disk
-v[50]
+v[299]

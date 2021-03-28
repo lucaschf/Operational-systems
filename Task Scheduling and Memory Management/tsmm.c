@@ -27,13 +27,16 @@ Queue *newQueue() {
 }
 
 int enqueue(Queue *queue, Task task) {
+    if (!queue)
+        return 0;
+
     if (isFull(queue)) {
         return 0;
     }
     if (queue->front == -1)
         queue->front = 0;
 
-    if (queue->rear == MAX_QUEUE_SIZE - 1)// rear is at last position of queue
+    if (queue->rear == MAXIMUM_PARALLEL_TASKS - 1)// rear is at last position of queue
         queue->rear = 0;
     else
         queue->rear++;
@@ -44,16 +47,23 @@ int enqueue(Queue *queue, Task task) {
 }
 
 int isFull(Queue *queue) {
-    return (queue->front == 0 && queue->rear == MAX_QUEUE_SIZE - 1) ||
+    if (!queue)
+        return 1;
+
+    return (queue->front == 0 && queue->rear == MAXIMUM_PARALLEL_TASKS - 1) ||
            (queue->front == queue->rear + 1);
 }
 
 int isEmpty(Queue *queue) {
+    if (!queue)
+        return 0;
+
     return queue->front == -1;
 }
 
 int peek(Queue *queue, Task *task) {
-    if (isEmpty(queue))
+
+    if (!queue || isEmpty(queue))
         return 0;
 
     *task = queue->tasks[queue->front];
@@ -61,7 +71,7 @@ int peek(Queue *queue, Task *task) {
 }
 
 int dequeue(Queue *queue, Task *task) {
-    if (isEmpty(queue)) {
+    if (!queue || isEmpty(queue)) {
         return 0;
     }
 
@@ -70,7 +80,7 @@ int dequeue(Queue *queue, Task *task) {
     {
         queue->front = -1;
         queue->rear = -1;
-    } else if (queue->front == MAX_QUEUE_SIZE - 1)
+    } else if (queue->front == MAXIMUM_PARALLEL_TASKS - 1)
         queue->front = 0;
     else
         queue->front++;
@@ -129,13 +139,13 @@ char *getTaskName(char *pathname) {
 
 void checkArgs(int argc, char **argv) {
     if (argc < 2 || argc > MAXIMUM_PARALLEL_TASKS + 1) {
-        printf("Wrong number of arguments\n");
+        printf("%s\n", WRONG_COMMAND_SYNTAX);
         exit(EXIT_FAILURE);
     }
 
     for (int i = 1; i < argc; i++) {
         if (!endsWith(argv[i], ".tsk")) {
-            printf("\nThe argument [%d] is invalid", i);
+            printf("\n%s: %s", INVALID_ARGUMENT, argv[i]);
             exit(EXIT_FAILURE);
         }
     }
@@ -155,7 +165,7 @@ void suspendTask(Task task) {
     task.state = SUSPENDED;
     task.ioTime += IO_SUSPENSION_TIME;
     endInterval(&task);
-    task.ioInterval[task.suspendedTimes] = startInterval();
+    task.suspendedIntervals[task.suspendedTimes] = startInterval();
     enqueue(suspendedTasks, task);
 }
 
@@ -189,6 +199,8 @@ void createTask(Task task) {
     task.cpuTime = 0;
     task.suspendedTimes = 0;
     task.cpuUsageTimes = 0;
+//    task.pagesCount = 0;
+
     enqueue(newTasks, task);
 }
 
@@ -347,9 +359,8 @@ void extractBaseTaskData(int argc, char **argv) {
 
         task.arrivalTime = i - 1;
         task.instructionsFile = fopen(argv[i], "r");
-
+        task.id = i;
         fail = !task.instructionsFile;
-
 
         if (!fail) {
             task.size_ = getTaskSize(task.instructionsFile);
@@ -400,7 +411,7 @@ int reachedLastInstruction(Task *task) {
     return 0;
 }
 
-void stagger() {
+void scheduler() {
 
     Instruction instruction;
     Task task;
@@ -428,13 +439,8 @@ void stagger() {
 
             if (execute(&task, instruction))
                 task.lastInstruction++;
-            else {
-                printf("A tarefa '%s' nao sera executada, pois tem instrucoes diferentes do tipo 1, 2 e 3."
-                       "\nUltima linha executada: %d.\n",
-                       task.name,
-                       task.lastInstruction
-                );
-            }
+            else
+                printf("\nFAILED TO EXECUTE INSTRUCTION");
 
             system_.currentCpuTime++;
 
@@ -460,24 +466,69 @@ int execute(Task *task, Instruction instruction) {
     }
 
     if (contains(instruction, "new")) {
-        // TODO
-        if (task->cpuInterval[task->cpuUsageTimes].end != -1)
-            task->cpuInterval[task->cpuUsageTimes] = startInterval();
-        task->cpuTime++;
-        return 1;
+        if (startsWith("new", instruction) || endsWith("new", instruction)) {
+            task->state = ABORTED;
+            return 0;
+        }
+
+        char *varName = strtok(instruction, " ");
+        if (varName) {
+            char *size = strtok(NULL, "new");
+
+            if (size && allocMemory(task, varName, atoi(size))) {// NOLINT(cert-err34-c)
+                if (task->cpuInterval[task->cpuUsageTimes].end != -1)
+                    task->cpuInterval[task->cpuUsageTimes] = startInterval();
+                task->cpuTime++;
+                return 1;
+            }
+        }
+
+        task->state = ABORTED;
+        return 0;
     }
 
-    if (contains(instruction, "[")) {
-        // TODO
-        if (task->cpuInterval[task->cpuUsageTimes].end != -1)
-            task->cpuInterval[task->cpuUsageTimes] = startInterval();
+    if (contains(instruction, "[") && contains(instruction, "]")) {
 
-        task->cpuTime++;
-        return 1;
+        if (startsWith("[", instruction) || startsWith("]", instruction)) {
+            task->state = ABORTED;
+            return 0;
+        }
+
+        char *varName = strtok(instruction, "[");
+        if (varName) {
+            char *strPos = strtok(NULL, "]");
+            if (strPos) {
+                if (accessMemory(task, varName, atoi(strPos)) == 1) { // NOLINT(cert-err34-c)
+                    if (task->cpuInterval[task->cpuUsageTimes].end != -1)
+                        task->cpuInterval[task->cpuUsageTimes] = startInterval();
+
+                    task->cpuTime++;
+                    return 1;
+                }
+
+                task->state = ABORTED;
+                printf("\nA tarefa %s tentou realizar um acesso invalido a memoria na linha: %d - %s\n",
+                       task->name,
+                       task->lastInstruction + 1,
+                       instruction
+                );
+                return 0;
+            }
+
+            task->state = ABORTED;
+            return 0;
+        }
     }
 
-    // is not a recognized instruction. The task should be aborted
+    // is not a recognized instruction. The task must be aborted
     task->state = ABORTED;
+    printf("%s '%s' %s\n%s: %d.\n",
+           THE_TASK,
+           task->name,
+           WILL_BE_ABORTED_DUE_UNSUPPORTED_INSTRUCTION,
+           LAST_LINE_EXECUTED,
+           task->lastInstruction
+    );
     return 0;
 }
 
@@ -498,40 +549,52 @@ void endInterval(Task *task) {
         task->cpuUsageTimes++;
     }
 
-    interval = &(task->ioInterval[task->suspendedTimes]);
+    interval = &(task->suspendedIntervals[task->suspendedTimes]);
     if (interval->end == -1) {
         interval->end = system_.currentCpuTime;
         task->suspendedTimes++;
     }
 }
 
-void printResult() {
+void report() {
     Task task;
 
-    printf("Tempo total de CPU:  %d\n\n", system_.currentCpuTime);
+    printf("\n%s: %d\n\n", TOTAL_CPU_TIME, system_.currentCpuTime);
 
     while (dequeue(endedTasks, &task)) {
         int tt = task.endTime - task.arrivalTime;
 
         printf(">> %s\n", task.name);
-        printf("\n\tInstante de finalizacao: %d", task.endTime);
-        printf("\n\tInstante de chegada: %d", task.arrivalTime);
-        printf("\n\tTempo de cpu: %d", task.cpuTime);
-        printf("\n\tTempo de disco: %d", task.ioTime);
-        printf("\n\tTurn around time: %d", tt);
-        printf("\n\tWait time: %d", tt - task.cpuTime);
-        printf("\n\tResponse time: %d", task.cpuInterval[0].start - task.arrivalTime);
+        printf("\n\t%s: %d", END_TIME, task.endTime);
+        printf("\n\t%s: %d", ARRIVAL_TIME, task.arrivalTime);
+        printf("\n\t%s: %0.f%%", PERCENTAGE_OF_PROCESSOR_OCCUPATION, (double) task.cpuTime / system_.currentCpuTime *
+                                                                     100.0); // NOLINT(cppcoreguidelines-narrowing-conversions)
+        printf("\n\t%s: %d", CPU_TIME, task.cpuTime);
+        printf("\n\t%s: %d", DISK_TIME, task.ioTime);
+        printf("\n\t%s: %d", TURN_AROUND_TIME, tt);
+        printf("\n\t%s: %d", WAIT_TIME, tt - task.cpuTime);
+        printf("\n\t%s: %d", RESPONSE_TIME, task.cpuInterval[0].start - task.arrivalTime);
 
-        printf("\n\n\tProcessador: \n");
+        printf("\n\n\t%s: \n", PROCESSOR);
         for (int i = 0; i < task.cpuUsageTimes; i++)
             printf("\t\t%d a %d ut\n", task.cpuInterval[i].start, task.cpuInterval[i].end);
 
-        printf("\tDisco: \n");
-        if (task.suspendedTimes)
+        printf("\t%s: \n", DISK);
+        if (!task.suspendedTimes) {
+            printf("\t\t%s\n\n", NO_DISC_ACCESS_PERFORMED);
+        }else
             for (int i = 0; i < task.suspendedTimes; i++)
-                printf("\t\t%d a %d ut\n", task.ioInterval[i].start, task.ioInterval[i].end);
-        else
-            printf("\t\tNenhum acesso a disco realizado\n\n");
+                printf("\t\t%d a %d ut\n", task.suspendedIntervals[i].start, task.suspendedIntervals[i].end);
+
+        printf("\t%s:\n", RESERVED_ADDRESSES);
+        for (int i = 0; i < system_.pagesCount; i++) {
+            Page p = system_.pages[i];
+
+            if (p.taskIdentifier == task.id && p.logicalMemory[0].distanceFromFirstAddress == 0) {
+                printf("\t\tIdentificador: %s -> ", p.logicalMemory[0].identifier);
+                printf("%d : %d\n", p.number, p.logicalMemory[0].displacement);
+            }
+        }
     }
 }
 
@@ -539,6 +602,8 @@ void run(int argc, char **argv) {
     Task task;
 
     system_.currentCpuTime = 0;
+    system_.lastPhysicalAddress = SYSTEM_MEMORY;
+
     checkArgs(argc, argv);
 
     if (!initQueues()) {
@@ -552,9 +617,72 @@ void run(int argc, char **argv) {
         prepareTask(task);
     }
 
-    stagger();
-    printResult();
+    scheduler();
+    report();
     releaseQueues();
+}
+
+int allocMemory(Task *task, char identifier[], int size) {
+    if (task->size_ + size > TASK_LOGICAL_MEMORY)
+        return 0;
+
+    Page page;
+    page.addressesCount = 0;
+    page.number = 0;
+    page.taskIdentifier = task->id;
+
+    if (!system_.pagesCount)
+        page.number = system_.lastPhysicalAddress / PAGE_SIZE;
+    else
+        page.number = system_.pages[system_.pagesCount - 1].number + 1;
+
+    for (int i = 0; i < size; i++) {
+        LogicalMemory logicalMemory;
+        logicalMemory.displacement = system_.lastPhysicalAddress % PHYSICAL_MEMORY;
+        system_.lastPhysicalAddress++;
+        logicalMemory.distanceFromFirstAddress = i;
+        logicalMemory.distanceFromLastAddress = size - 1 - i;
+        strcpy(logicalMemory.identifier, identifier);
+
+        if (page.addressesCount == PAGE_SIZE) {
+            system_.pages[system_.pagesCount++] = page;
+            page.addressesCount = 0;
+            page.logicalMemory[page.addressesCount++] = logicalMemory;
+            page.number = system_.pages[system_.pagesCount - 1].number + 1;
+        } else {
+            page.logicalMemory[page.addressesCount++] = logicalMemory;
+        }
+    }
+
+    if (system_.pagesCount == 0 || system_.pages[system_.pagesCount - 1].number != page.number)
+        system_.pages[system_.pagesCount++] = page;
+
+    task->size_ += size;
+
+    return 1;
+}
+
+int accessMemory(Task *task, char identifier[], int position) {
+    if (system_.pagesCount == 0)
+        return 0; // no allocation made
+
+    for (int i = 0; i < system_.pagesCount; i++) {
+        Page p = system_.pages[i];
+
+        if (p.taskIdentifier != task->id)
+            continue;
+
+        if (!strcmp(p.logicalMemory[0].identifier, identifier)) {
+            if (p.addressesCount > position) { // accepted address
+                return 1;
+            }
+
+            if (p.logicalMemory[p.addressesCount - 1].distanceFromLastAddress == 0)
+                return -1; // access violation
+        }
+    }
+
+    return 0; // no variable found for the identifier and task
 }
 
 int main(int argc, char **argv) {
@@ -563,9 +691,9 @@ int main(int argc, char **argv) {
 
     argc = 5;
     argv[1] = "../t1.tsk";
-    argv[2] = "../t2.tsk";
-    argv[3] = "../t3.tsk";
-    argv[4] = "../t4.tsk";
+    argv[2] = "../t1.tsk";
+    argv[3] = "../t1.tsk";
+    argv[4] = "../t1.tsk";
 
     run(argc, argv);
     return 0;

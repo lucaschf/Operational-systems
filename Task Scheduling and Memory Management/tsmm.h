@@ -7,11 +7,36 @@
 #define TIME_QUANTUM 2
 #define INSTRUCTION_LENGTH 50
 #define MAXIMUM_PARALLEL_TASKS 4
-#define TASK_SIZE_DELIMITER "#T="
 
-#define MAX_QUEUE_SIZE 300
+#define MAX_QUEUE_SIZE 30
 #define IO_SUSPENSION_TIME 5
-#define MAX_TASK_SIZE 4000 // bytes
+#define TASK_LOGICAL_MEMORY 4096 // bytes - 4K
+#define PHYSICAL_MEMORY 65536 // bytes - 64K
+#define SYSTEM_MEMORY 20480 // bytes
+#define PAGE_SIZE 512 // bytes
+#define IDENTIFIER_LENGTH 20
+
+//region Strings
+#define TASK_SIZE_DELIMITER "#T="
+#define WRONG_COMMAND_SYNTAX "A sintaxe do comando esta incorreta"
+#define INVALID_ARGUMENT "Argumento invalido"
+#define TOTAL_CPU_TIME "Tempo total de CPU"
+#define NO_DISC_ACCESS_PERFORMED "Nenhum acesso a disco realizado"
+#define END_TIME "Instante de finalizacao"
+#define ARRIVAL_TIME "Instante de chegada"
+#define CPU_TIME "Tempo de cpu"
+#define DISK_TIME "Tempo de disco"
+#define TURN_AROUND_TIME "Turn around time"
+#define WAIT_TIME "Tempo de espera"
+#define RESPONSE_TIME "Response time"
+#define PROCESSOR "Processador"
+#define PERCENTAGE_OF_PROCESSOR_OCCUPATION "Porcentagem de ocupacao do processador"
+#define DISK "Disco"
+#define THE_TASK "A tarefa"
+#define LAST_LINE_EXECUTED "Ultima linha executada"
+#define WILL_BE_ABORTED_DUE_UNSUPPORTED_INSTRUCTION "nao sera executada, pois tem instrucoes diferentes do tipo 1, 2 e 3."
+#define RESERVED_ADDRESSES "Enderecos reservados"
+//endregion
 
 typedef char Instruction[INSTRUCTION_LENGTH];
 
@@ -25,7 +50,22 @@ typedef struct {
 } TimeInterval;
 
 typedef struct {
-    char* name;
+    char identifier[IDENTIFIER_LENGTH];
+    int distanceFromLastAddress;
+    int distanceFromFirstAddress;
+    int displacement;
+} LogicalMemory;
+
+typedef struct {
+    int taskIdentifier;
+    int number;
+    int addressesCount;
+    LogicalMemory logicalMemory[PAGE_SIZE];
+} Page;
+
+typedef struct {
+    int id;
+    char *name;
     State state;
     int cpuTime;
     int ioTime;
@@ -34,24 +74,26 @@ typedef struct {
     int suspendedAt;
     int endTime;
     int lastInstruction; // counts the successful performed instruction
-    FILE *instructionsFile; // file that contains task instruction
+    FILE *instructionsFile; // file that contains task instructions
+
     int suspendedTimes;
-    TimeInterval ioInterval[MAX_QUEUE_SIZE];
+    TimeInterval suspendedIntervals[MAX_QUEUE_SIZE];
+
     int cpuUsageTimes;
     TimeInterval cpuInterval[MAX_QUEUE_SIZE];
 } Task;
 
 typedef struct {
     int currentCpuTime;
-    int totalMemory;
-    int usedMemory;
-    int freMemory;
+    int lastPhysicalAddress;
+    Page pages[PAGE_SIZE];
+    int pagesCount;
 } System;
 
 // region task queue
 
 typedef struct {
-    Task tasks[MAX_QUEUE_SIZE];
+    Task tasks[MAXIMUM_PARALLEL_TASKS];
     int front;
     int rear;
 } Queue;
@@ -69,6 +111,10 @@ int isEmpty(Queue *queue);
 int peek(Queue *queue, Task *task);
 
 int dequeue(Queue *queue, Task *task);
+
+int allocMemory(Task *task, char identifier[], int size);
+
+int accessMemory(Task *task, char identifier[], int position);
 
 // endregion
 
@@ -115,7 +161,7 @@ TimeInterval startInterval();
 
 void endInterval(Task *task);
 
-void stagger();
+void scheduler();
 
 int execute(Task *task, Instruction instruction);
 
