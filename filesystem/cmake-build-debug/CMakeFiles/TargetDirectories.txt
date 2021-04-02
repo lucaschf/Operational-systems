@@ -1,0 +1,3 @@
+F:/TSI/2nd period/Operational systems/Operational-systems/filesystem/cmake-build-debug/CMakeFiles/filesystem.dir
+F:/TSI/2nd period/Operational systems/Operational-systems/filesystem/cmake-build-debug/CMakeFiles/edit_cache.dir
+F:/TSI/2nd period/Operational systems/Operational-systems/filesystem/cmake-build-debug/CMakeFiles/rebuild_cache.dir

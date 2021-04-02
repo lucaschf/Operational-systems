@@ -157,12 +157,32 @@ int startsWith(const char *str, const char *prefix);
 
 // endregion
 
+/**
+ * Creates a TimeInterval begin with system current cpu time, the end of this interval has not been defined yet.
+ *
+ * @return the created interval
+ */
 TimeInterval startInterval();
 
+/**
+ * Check in task if there are any intervals open and if found any, ends it with system current cpu time.
+ *
+ * @param task
+ */
 void endInterval(Task *task);
 
+/**
+ * Task scheduler
+ */
 void scheduler();
 
+/**
+ * Executes an instruction on a specific task
+ *
+ * @param task
+ * @param instruction
+ * @return 1 if successful, 0 if instruction is malformed or execution fails
+ */
 int execute(Task *task, Instruction instruction);
 
 /**

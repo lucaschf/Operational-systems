@@ -124,6 +124,7 @@ int startsWith(const char *str, const char *prefix) {
 }
 // endregion
 
+// retrieves the task name based on file name
 char *getTaskName(char *pathname) {
     char *name = NULL;
 
@@ -137,6 +138,12 @@ char *getTaskName(char *pathname) {
     return name;
 }
 
+/**
+ * checks whether the arguments provided are valid. if not, it aborts execution;
+ *
+ * @param argc args count
+ * @param argv args values
+ */
 void checkArgs(int argc, char **argv) {
     if (argc < 2 || argc > MAXIMUM_PARALLEL_TASKS + 1) {
         printf("%s\n", WRONG_COMMAND_SYNTAX);
@@ -189,7 +196,7 @@ void abortTask(Task task) {
     enqueue(abortedTasks, task);
 }
 
-// sets the default values to a task and enqueue it
+// sets the default values to a task and enqueue it as new task
 void createTask(Task task) {
     task.state = NEW;
     task.suspendedAt = -1;
@@ -199,7 +206,6 @@ void createTask(Task task) {
     task.cpuTime = 0;
     task.suspendedTimes = 0;
     task.cpuUsageTimes = 0;
-//    task.pagesCount = 0;
 
     enqueue(newTasks, task);
 }
@@ -367,7 +373,7 @@ void extractBaseTaskData(int argc, char **argv) {
         }
 
         // if any argument is invalid or cannot open the file, abort.
-        if (fail || task.size_ == -1) {
+        if (fail || task.size_ <= 0) {
             for (int j = 0; j < i; j++) {
                 dequeue(newTasks, &task);
                 fclose(task.instructionsFile);
@@ -432,6 +438,7 @@ void scheduler() {
 
             removeNewline(instruction);
 
+            // reached the last instruction
             if (!strcmp(instruction, "")) {
                 task.state = FINISHED;
                 break;
@@ -439,12 +446,11 @@ void scheduler() {
 
             if (execute(&task, instruction))
                 task.lastInstruction++;
-            else
-                printf("\nFAILED TO EXECUTE INSTRUCTION");
 
             system_.currentCpuTime++;
 
-            if (task.state == FINISHED || task.state == SUSPENDED)
+            // if task is aborted, suspended or ended, we must remove it from cpu.
+            if (task.state == FINISHED || task.state == SUSPENDED || task.state == ABORTED)
                 break;
         }
 
@@ -456,6 +462,72 @@ void scheduler() {
     }
 }
 
+int executeMemoryAllocation(Task *task, Instruction instruction) {
+
+    // malformed instruction
+    if (startsWith("new", instruction) || endsWith("new", instruction)) {
+        task->state = ABORTED;
+        return 0;
+    }
+
+    char *varName = strtok(instruction, " ");
+    if (varName) {
+        char *size = strtok(NULL, "new");
+
+        if (size && allocMemory(task, varName, atoi(size))) {// NOLINT(cert-err34-c)
+            if (task->cpuInterval[task->cpuUsageTimes].end != -1)
+                task->cpuInterval[task->cpuUsageTimes] = startInterval();
+            task->cpuTime++;
+
+            return 1;
+        }
+    }
+
+    // malformed instruction
+    task->state = ABORTED;
+    return 0;
+}
+
+int executeMemoryAccess(Task *task, Instruction instruction) {
+
+    // malformed instruction
+    if (startsWith("[", instruction) || startsWith("]", instruction)) {
+        task->state = ABORTED;
+        return 0;
+    }
+
+    char *varName = strtok(instruction, "[");
+    if (varName) {
+        char *strPos = strtok(NULL, "]");
+
+        if (strPos) {
+            if (accessMemory(task, varName, atoi(strPos)) == 1) { // NOLINT(cert-err34-c)
+                if (task->cpuInterval[task->cpuUsageTimes].end != -1)
+                    task->cpuInterval[task->cpuUsageTimes] = startInterval();
+
+                task->cpuTime++;
+                return 1;
+            }
+
+            // no variable allocated or requested position is out of bounds
+            task->state = ABORTED;
+            printf("\nA tarefa %s tentou realizar um acesso invalido a memoria na linha: %d - %s\n",
+                   task->name,
+                   task->lastInstruction + 1,
+                   instruction
+            );
+
+            return 0;
+        }
+
+        task->state = ABORTED;
+        return 0;
+    }
+
+    // malformed instruction
+    return 0;
+}
+
 int execute(Task *task, Instruction instruction) {
 
     // this is a IO execution, so we should suspend the task
@@ -465,62 +537,17 @@ int execute(Task *task, Instruction instruction) {
         return 1;
     }
 
+    // this is a memory allocation instruction
     if (contains(instruction, "new")) {
-        if (startsWith("new", instruction) || endsWith("new", instruction)) {
-            task->state = ABORTED;
-            return 0;
-        }
-
-        char *varName = strtok(instruction, " ");
-        if (varName) {
-            char *size = strtok(NULL, "new");
-
-            if (size && allocMemory(task, varName, atoi(size))) {// NOLINT(cert-err34-c)
-                if (task->cpuInterval[task->cpuUsageTimes].end != -1)
-                    task->cpuInterval[task->cpuUsageTimes] = startInterval();
-                task->cpuTime++;
-                return 1;
-            }
-        }
-
-        task->state = ABORTED;
-        return 0;
+        return executeMemoryAllocation(task, instruction);
     }
 
+    // potentially a memory access instruction
     if (contains(instruction, "[") && contains(instruction, "]")) {
-
-        if (startsWith("[", instruction) || startsWith("]", instruction)) {
-            task->state = ABORTED;
-            return 0;
-        }
-
-        char *varName = strtok(instruction, "[");
-        if (varName) {
-            char *strPos = strtok(NULL, "]");
-            if (strPos) {
-                if (accessMemory(task, varName, atoi(strPos)) == 1) { // NOLINT(cert-err34-c)
-                    if (task->cpuInterval[task->cpuUsageTimes].end != -1)
-                        task->cpuInterval[task->cpuUsageTimes] = startInterval();
-
-                    task->cpuTime++;
-                    return 1;
-                }
-
-                task->state = ABORTED;
-                printf("\nA tarefa %s tentou realizar um acesso invalido a memoria na linha: %d - %s\n",
-                       task->name,
-                       task->lastInstruction + 1,
-                       instruction
-                );
-                return 0;
-            }
-
-            task->state = ABORTED;
-            return 0;
-        }
+        return executeMemoryAccess(task, instruction);
     }
 
-    // is not a recognized instruction. The task must be aborted
+    // is not a recognized instruction. The task must be aborted.
     task->state = ABORTED;
     printf("%s '%s' %s\n%s: %d.\n",
            THE_TASK,
@@ -529,6 +556,7 @@ int execute(Task *task, Instruction instruction) {
            LAST_LINE_EXECUTED,
            task->lastInstruction
     );
+
     return 0;
 }
 
@@ -582,7 +610,7 @@ void report() {
         printf("\t%s: \n", DISK);
         if (!task.suspendedTimes) {
             printf("\t\t%s\n\n", NO_DISC_ACCESS_PERFORMED);
-        }else
+        } else
             for (int i = 0; i < task.suspendedTimes; i++)
                 printf("\t\t%d a %d ut\n", task.suspendedIntervals[i].start, task.suspendedIntervals[i].end);
 
@@ -663,6 +691,11 @@ int allocMemory(Task *task, char identifier[], int size) {
 }
 
 int accessMemory(Task *task, char identifier[], int position) {
+
+    // out of bounds
+    if (position < 0)
+        return -1;
+
     if (system_.pagesCount == 0)
         return 0; // no allocation made
 
@@ -678,7 +711,7 @@ int accessMemory(Task *task, char identifier[], int position) {
             }
 
             if (p.logicalMemory[p.addressesCount - 1].distanceFromLastAddress == 0)
-                return -1; // access violation
+                return -1; // access violation - out of bounds
         }
     }
 
@@ -686,15 +719,7 @@ int accessMemory(Task *task, char identifier[], int position) {
 }
 
 int main(int argc, char **argv) {
-
     setlocale(LC_ALL, "Portuguese");
-
-    argc = 5;
-    argv[1] = "../t1.tsk";
-    argv[2] = "../t1.tsk";
-    argv[3] = "../t1.tsk";
-    argv[4] = "../t1.tsk";
-
     run(argc, argv);
     return 0;
 }
