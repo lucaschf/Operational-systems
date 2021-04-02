@@ -3,7 +3,6 @@
 #include <time.h>
 #include <string.h>
 #include <locale.h>
-#include <ctype.h>
 #include "filesystem.h"
 
 #define INCORRECT_SYNTAX "Sintaxe incorreta"
@@ -23,6 +22,8 @@ int numeroDiscos = 0;
 unsigned short verificaTipoArquivo(TIPO_DE_ARQUIVO *tipoDeArquivo, const void *pVoid);
 
 unsigned int computeOccupiedSpace(Disco *d, Arquivo *arq, unsigned int numeroRegistros);
+
+size_t calculateBlocks(unsigned int bufferSize);
 
 time_t getCurrentTime() {
     time_t rawTime;
@@ -84,6 +85,7 @@ int formatar(char unidade, Disco *disco) {
     disco->espacoOcupado = 0;
     disco->espacoLivre = disco->capacidade;
     disco->blocosLogicosOcupados = 0;
+    disco->blocosLogicosLivres = disco->blocosLogicosTotais;
     disco->arquivosEmDisco = 0;
 
     for (int i = 0; i < NUMERO_DE_ARQUIVOS_DO_DISCO; i++) {
@@ -161,10 +163,6 @@ int abrir(char unidade, const char *nomeArquivo) {
     return TRUE;
 }
 
-unsigned int getRecordSize(Arquivo *arq) {
-    return arq->tipo == STRING ? sizeof(char) : sizeof(int);
-}
-
 int escrever(char unidade, unsigned short fd, const void *buffer, unsigned int tamanho) {
 
     //region checagem de disco e arquivo
@@ -177,11 +175,14 @@ int escrever(char unidade, unsigned short fd, const void *buffer, unsigned int t
         return ERRO_ESCREVER_ARQUIVO;
     //endregion
 
-    if(arq->tamanho)
+    if (arq->tamanho)
         tamanho++;
 
     size_t recordSize = sizeof(void *);
     size_t bufferSize = tamanho * recordSize;
+
+    if(calculateBlocks(bufferSize) > d->blocosLogicosLivres)
+        return ERRO_ESCREVER_ARQUIVO;
 
     if (d->espacoLivre < bufferSize) {
         return ERRO_ESCREVER_ARQUIVO;
@@ -190,6 +191,9 @@ int escrever(char unidade, unsigned short fd, const void *buffer, unsigned int t
     TIPO_DE_ARQUIVO tipoDeArquivo;
     unsigned int items = verificaTipoArquivo(&tipoDeArquivo, buffer);
     size_t itemsWrote;
+
+    if (items == 0)
+        return ERRO_ESCREVER_ARQUIVO;
 
     if (!arq->conteudo) {
         arq->conteudo = malloc(bufferSize);
@@ -207,19 +211,17 @@ int escrever(char unidade, unsigned short fd, const void *buffer, unsigned int t
         if (tipoDeArquivo == STRING && arq->tipo == NUMERICO)
             return ERRO_ESCREVER_ARQUIVO;
 
-        realloc(arq->conteudo, arq->tamanho + bufferSize);
+        realloc(arq->conteudo, arq->tamanho + bufferSize - recordSize);
     }
 
-    printf("items weort: %d", itemsWrote);
-    if(itemsWrote){
+    if (itemsWrote) {
+        // adds a whitespace before writing
         strcat(arq->conteudo, " ");
         itemsWrote++;
     }
     memcpy(&arq->conteudo[itemsWrote], buffer, tamanho * recordSize);
 
-    printf("NOCO CONTEUDO: %s", arq->conteudo);
-
-    return computeOccupiedSpace(d, arq, arq->tipo == NUMERICO ? items : tamanho);
+    return (int) computeOccupiedSpace(d, arq, arq->tipo == NUMERICO ? items : tamanho);
 }
 
 unsigned int computeOccupiedSpace(Disco *d, Arquivo *arq, unsigned int numeroRegistros) {
@@ -229,10 +231,7 @@ unsigned int computeOccupiedSpace(Disco *d, Arquivo *arq, unsigned int numeroReg
     recordSize = arq->tipo == NUMERICO ? sizeof(int) : sizeof(char);
     bufferSize = recordSize * numeroRegistros;
 
-    unsigned int blocos = bufferSize / TAMANHO_BLOCO_LOGICO;;
-
-    if (!blocos)
-        blocos++;
+    size_t blocos = calculateBlocks(bufferSize);
 
     arq->tamanho += bufferSize;
     arq->blocosLogicos += blocos;
@@ -242,6 +241,15 @@ unsigned int computeOccupiedSpace(Disco *d, Arquivo *arq, unsigned int numeroReg
     d->blocosLogicosLivres -= blocos;
 
     return bufferSize;
+}
+
+size_t calculateBlocks(unsigned int bufferSize) {
+    unsigned int blocos = bufferSize / TAMANHO_BLOCO_LOGICO;;
+
+    if(bufferSize % TAMANHO_BLOCO_LOGICO)
+        blocos++;
+
+    return blocos;
 }
 
 unsigned short verificaTipoArquivo(TIPO_DE_ARQUIVO *tipoDeArquivo, const void *pVoid) {
@@ -258,7 +266,7 @@ unsigned short verificaTipoArquivo(TIPO_DE_ARQUIVO *tipoDeArquivo, const void *p
     int c = tokenize(data, splitData, MAX_PARAMS, " ");
     for (int i = 0; i < c; i++) {
         strcpy(temp, splitData[i]);
-        int ret = sscanf(temp, "%f%n", &ignore, &len);
+        int ret = sscanf(temp, "%f%n", &ignore, &len); // NOLINT(cert-err34-c)
         if (ret != 1 || temp[len])
             *tipoDeArquivo = STRING;
     }
@@ -408,10 +416,13 @@ void removeNewline(char *str) {
         str[length - 1] = '\0';
 }
 
-int tokenize(char *source, char dest[][PARAM_LENGTH], unsigned int expectedTokens, char *delimiter) {
+int tokenize(const char *source, char dest[][PARAM_LENGTH], unsigned int expectedTokens, char *delimiter) {
     int count = 1;
 
-    char *t = strtok(source, delimiter);
+    char temp[strlen(source)];
+    strcpy(temp, source);
+
+    char *t = strtok(temp, delimiter);
 
     while (t) {
         if (count < expectedTokens)
@@ -445,8 +456,6 @@ void menu() {
         }
 
         execute(c, splitedInstruction);
-
-        printf("\n");
     } while (1);
 }
 
@@ -504,7 +513,7 @@ void execute(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
 
 int checkSyntax(int received, int expected) {
     if (received != expected) {
-        printf("\n%\n", INCORRECT_SYNTAX);
+        printf("%s\n", INCORRECT_SYNTAX);
         return 0;
     }
 
@@ -513,13 +522,13 @@ int checkSyntax(int received, int expected) {
 
 Disco *checkDisco(const char *unidade) {
     if (strlen(unidade) > 1) {
-        printf("\nUnidade de disco inválida\n");
+        printf("Unidade de disco inválida\n");
         return NULL;
     }
 
     Disco *d = buscaPorUnidade(unidade[0]);
     if (!d) {
-        printf("\nUnidade de disco nao encontrada\n");
+        printf("Unidade de disco nao encontrada\n");
         return NULL;
     }
 
@@ -553,21 +562,21 @@ void executaCriacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
 
     const char *name = args[1];
     if (strlen(name) > 1) {
-        printf("\n%s\n", UNITY_TOO_LONG);
+        printf("%s\n", UNITY_TOO_LONG);
         return;
     }
 
     if (buscaPorUnidade(name[0])) {
-        printf("\n%s\n", THERE_IS_ALREADY_A_DISK_WITH_THIS_UNITY_NAME);
+        printf("%s\n", THERE_IS_ALREADY_A_DISK_WITH_THIS_UNITY_NAME);
         return;
     }
 
     Disco *d = (criaDisco(name[0], CAPACIDADE_DISCO));
     if (d) {
         discos[numeroDiscos++] = d;
-        printf("\n%s\n", DISK_SUCCESSFUL_CREATED);
+        printf("%s\n", DISK_SUCCESSFUL_CREATED);
     } else
-        printf("\n%s\n", DISK_CREATION_FAILURE);
+        printf("%s\n", DISK_CREATION_FAILURE);
 }
 
 void executaCriacaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
@@ -579,26 +588,28 @@ void executaCriacaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) 
         return;
 
     if (strlen(args[2]) > TAMANHO_NOME_ARQUIVO) {
-        printf("\n%s\n", FILE_NAME_TO_LONG);
+        printf("%s\n", FILE_NAME_TO_LONG);
         return;
     }
 
     if (buscaArquivo(d, args[2])) {
-        printf("\n%s\n", THERE_IS_ALREADY_A_FILE_WITH_THIS_NAME);
+        printf("%s\n", THERE_IS_ALREADY_A_FILE_WITH_THIS_NAME);
         return;
     }
 
     if (criar(d->unidade, args[2])) {
-        printf("\n%s\n", FILE_SUCCESSFUL_CREATED);
+        printf("%s\n", FILE_SUCCESSFUL_CREATED);
         return;
     } else
-        printf("\n%s\n", FILE_CREATION_FAILURE);
+        printf("%s\n", FILE_CREATION_FAILURE);
 }
 
 void executaEscritaArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
 
-    if (argc < 3)
-        printf("\n%s", INCORRECT_SYNTAX);
+    if (argc < 3) {
+        printf("%s\n", INCORRECT_SYNTAX);
+        return;
+    }
 
     Disco *d = checkDisco(args[1]);
     if (!d)
@@ -617,14 +628,13 @@ void executaEscritaArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) 
     }
 
     int result = escrever(d->unidade, arq->fd, args2, strlen(args2));
-//
-//
-//    if (result == ERRO_ESCREVER_ARQUIVO) {
-//        printf("\nErro ao escrever no arquivo");
-//        return;
-//    }
 
-//    printf("\n%d bytes escritos no arquivo", result);
+    if (result == ERRO_ESCREVER_ARQUIVO && strlen(arq->conteudo) != ERRO_ESCREVER_ARQUIVO) {
+        printf("Erro ao escrever no arquivo\n");
+        return;
+    }
+
+    printf("%d bytes escritos no arquivo\n", result);
 }
 
 void executaLeituraArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
@@ -643,11 +653,11 @@ void executaLeituraArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) 
     unsigned int size = strlen(arq->conteudo);
     void *buff[size];
 
-    if (ler(d->unidade, arq->fd, buff, size) == ERRO_LER_ARQUIVO) {
-        printf("\nFalha na leitura do arquivo");
+    if (ler(d->unidade, arq->fd, buff, size) == ERRO_LER_ARQUIVO && strlen((char *)buff) != ERRO_LER_ARQUIVO) {
+        printf("Falha na leitura do arquivo\n");
         return;
     }
-    printf("\n%s", ((char *) buff));
+    printf("%s\n", ((char *) buff));
 }
 
 void manipulaEstadoAberturaArquivo(int argc, EstadoArquivo estado, const char args[MAX_PARAMS][PARAM_LENGTH]) {
@@ -662,14 +672,14 @@ void manipulaEstadoAberturaArquivo(int argc, EstadoArquivo estado, const char ar
 
     if (estado == ABERTO) {
         if (abrir(unidade, args[2]) == TRUE)
-            printf("\nArquivo aberto com sucesso");
+            printf("Arquivo aberto com sucesso\n");
         else
-            printf("\nFalha ao abrir arquivo");
+            printf("Falha ao abrir arquivo\n");
     } else {
         if (fechar(unidade, arquivo->fd) == TRUE)
-            printf("\nArquivo fechado com sucesso");
+            printf("Arquivo fechado com sucesso\n");
         else
-            printf("\nFalha ao fechar arquivo");
+            printf("Falha ao fechar arquivo\n");
     }
 }
 
@@ -680,13 +690,15 @@ void executaExclusaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH])
     char unidade = *args[1];
     Arquivo *arquivo = checkArquivo(checkDisco(args[1]), args[2]);
 
-    if (!arquivo)
+    if (!arquivo){
+        printf("Falha ao excluir\n");
         return;
+    }
 
-    if (excluir(unidade, args[2])) {
-        printf("\nArquivo exluido com sucesso");
+    if (excluir(unidade, args[2]) == TRUE) {
+        printf("Arquivo exluido com sucesso\n");
     } else
-        printf("\nFalha ao excluir");
+        printf("Falha ao excluir\n");
 }
 
 void executaFormatacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
@@ -701,9 +713,9 @@ void executaFormatacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH])
         return;
 
     if (formatar(unidade[0], d) != TRUE) {
-        printf("\nFalha ao formatar disco");
+        printf("Falha ao formatar disco\n");
     } else
-        printf("\nFormatação realizada com sucesso.");
+        printf("Formatação realizada com sucesso.\n");
 }
 
 void listaDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
@@ -712,32 +724,17 @@ void listaDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
 
     const char *unidade = args[1];
     if (strlen(unidade) > 1) {
-        printf("\n%s", UNITY_TOO_LONG);
+        printf("%san", UNITY_TOO_LONG);
         return;
     }
 
     char *data = infoDisco(unidade[0]);
     if (data) {
-        printf("\n%s", data);
+        printf("%s\n", data);
         return;
     }
 
-    printf("\nFalha ao obter dados");
-}
-
-int isOnlyNumbers(char items[], unsigned int size) {
-    int i;
-
-    for (i = 0; i < size; i++) {
-        if ((!isdigit(items[i]) && items[i] != ' ' && items[i] != '-' && items[i] != '.') || (
-                (items[i] == '-' && i == size - 1) ||
-                (items[i] == '.' && i == size - 1))
-                ) {
-            return 0;
-        }
-    }
-
-    return 1;
+    printf("Falha ao obter dados\n");
 }
 
 int main() {

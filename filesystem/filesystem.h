@@ -236,11 +236,9 @@ int excluir(char unidade, const char *nomeArquivo);
 */
 char *infoDisco(char unidade);
 
-int tokenize(char *source, char destdest[][PARAM_LENGTH],unsigned int expectedTokens, char *delimiter);
+int tokenize(const char *source, char destdest[][PARAM_LENGTH],unsigned int expectedTokens, char *delimiter);
 
 void execute(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
-
-int isOnlyNumbers(char items[], unsigned int size);
 
 void executaCriacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
 
