@@ -61,7 +61,7 @@ void manage_pointer(Allocation *allocation, Task *task) {
 
     allocation->next = NULL;
     allocation->prev = task->last;
-    task->first->prev = allocation;
+    task->first->prev = NULL;
     task->last->next = allocation;
     task->last = allocation;
 }
@@ -99,26 +99,23 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
 
     Allocation *last = task->last;
     Allocation *iterator = last;
-    size_t last_page_size = 0;
 
     char previous_var[VAR_NAME_LENGTH] = "";
-    if (last){
-        strcpy(previous_var, last->var_name);
-        last_page_size = iterator->size;
-    }
+    strcpy(previous_var, last->var_name);
+    size_t last_page_size = iterator->size;
 
-    while (iterator != NULL && iterator->logic_page == last->logic_page) {
+    while (iterator && iterator->logic_page == last->logic_page) {
         if (strcmp(iterator->var_name, previous_var) != 0) {
             last_page_size += iterator->size;
         }
+
         strcpy(previous_var, iterator->var_name);
         iterator = iterator->prev;
     }
 
     manage_pointer(allocation, task);
 
-    allocation->
-            logic_page = last_page_size == PAGE_SIZE ? task->last->logic_page + 1 : task->last->logic_page;
+    allocation->logic_page = last_page_size >= PAGE_SIZE ? last->logic_page + 1 : last->logic_page;
 
     if (strcmp(last->var_name, var_name) != 0) {
         allocation->size = size;
@@ -136,7 +133,6 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
         return allocate_memory(var_name, remaining, task);
     }
 
-    cont++;
     return 1;
 }
 
@@ -145,7 +141,5 @@ int main(int argc, char **argv) {
     init_task(&t, 150);
 
     allocate_memory("v", 363, &t);
-
-    printf("CONT %d: ", cont);
     return 0;
 }
