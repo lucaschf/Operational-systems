@@ -426,6 +426,7 @@ void execute_instructions(Task *task, FILE *instructions_file) {
         }
 
         printf("\nA tarefa %s foi cancelada porque tem a instrucao invalida \"%s\".", task->name, instruction);
+        return;
     }
 }
 
