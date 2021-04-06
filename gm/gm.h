@@ -20,7 +20,6 @@ typedef struct Allocation {
     char var_name[VAR_NAME_LENGTH];
     unsigned short logic_page;
     unsigned short start_pos;
-//    unsigned short pos;
     unsigned short index;
     unsigned int size;
     struct Allocation *next;
@@ -30,5 +29,7 @@ typedef struct Allocation {
 int ends_with(const char *str, const char *end);
 
 int allocate_memory(const char *var_name, size_t size, Task *task);
+
+int access_memory(const char *var_name, size_t size, const Task *task);
 
 #endif //GM_GM_H

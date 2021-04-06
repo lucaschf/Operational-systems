@@ -140,11 +140,35 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
     return 1;
 }
 
+int access_memory(const char *var_name, size_t position, const Task *task) {
+    if (!var_name || !task->first)
+        return 0;
+
+    Allocation *iterator = task->first;
+    while (iterator) {
+        if (!strcmp(var_name, iterator->var_name)) {
+            if (position >= iterator->size)
+                return -1; // Access violation
+
+            if ((PAGE_SIZE - iterator->start_pos) - 1 >= position) {
+                return (int) (iterator->start_pos + position + iterator->index);
+            }
+        }
+
+        iterator = iterator->next;
+    }
+
+    return 0;
+}
+
 int main(int argc, char **argv) {
     Task t;
     init_task(&t, 150);
 
     allocate_memory("v", 363, &t);
     allocate_memory("x", 50, &t);
+
+    printf("ACESSO MEMORIA %d", access_memory("x", 10, &t));
+
     return 0;
 }
