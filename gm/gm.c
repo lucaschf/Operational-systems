@@ -205,7 +205,7 @@ int access_memory(const char *var_name, size_t index, const Task *task, memory_a
 
             size_t last_index = (PAGE_SIZE * (iterator->logic_page + 1)) - 1;
 
-            if(last_index + iterator->start_pos >= index){
+            if (last_index + iterator->start_pos >= index) {
 
                 int physical_page = (SYSTEM_MEMORY / PAGE_SIZE) + iterator->logic_page;
                 int physical_address =
@@ -290,6 +290,7 @@ void run(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
+    strcpy(task.name, argv[1]);
     if (init_task(&task, task_size) != 1) {
         printf("\nFalha ao inicializar tarefa");
         fclose(instructions_file);
@@ -337,7 +338,8 @@ void show_allocation_ranges(Task task) {
         if (end_index <= last_index) {
             end.logic_page.page = iterator->logic_page;
             end.logic_page.address =
-                    (int) ((iterator->index + iterator->size - iterator->start_pos) - iterator->logic_page * PAGE_SIZE) - 1;
+                    (int) ((iterator->index + iterator->size - iterator->start_pos) -
+                           iterator->logic_page * PAGE_SIZE) - 1;
             end.physical_page.page = (SYSTEM_MEMORY / PAGE_SIZE) + iterator->logic_page;
             end.physical_page.address =
                     SYSTEM_MEMORY + iterator->index + iterator->size - iterator->start_pos - 1;
@@ -404,6 +406,7 @@ void execute_instructions(Task *task, FILE *instructions_file) {
     const char key_access_end[] = "]";
 
     while (fgets(instruction, INSTRUCTION_LENGTH, instructions_file)) {
+        remove_newline(instruction);
         remove_newline(instruction);
 
         if (!strcmp(instruction, ""))
