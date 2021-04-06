@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include "gm.h"
 
-int cont = 0;
-
 //region utils
 int ends_with(const char *str, const char *end) {
     return strcmp(str + strlen(str) - strlen(end), end) == 0;
@@ -49,9 +47,8 @@ int init_task(Task *t, size_t size) {
 
 void arrange_allocated_pointers(Allocation *allocation, Task *task) {
     if (!task->first) {
-        allocation->next = allocation;
+        allocation->next = NULL;
         task->first = allocation;
-
         task->last = allocation;
         task->last->prev = NULL;
         task->last->next = NULL;
@@ -70,7 +67,7 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
 
     Allocation *allocation;
 
-    if (task->size + size >= TASK_LOGICAL_MEMORY)
+    if (task->size + size > TASK_LOGICAL_MEMORY)
         return 0; // no task memory
 
     // assuming is first allocation (code)
@@ -99,6 +96,7 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
         return 0;
 
     Allocation *last = task->last;
+    arrange_allocated_pointers(allocation, task);
 
     // iterates over previous allocations summing allocation sizes
     Allocation *iterator = last;
@@ -108,15 +106,12 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
 
     while (iterator && iterator->logic_page == last->logic_page) {
         if (strcmp(iterator->var_name, previous_var) != 0) {
-            last_page_size += iterator->size - iterator->index;
+            last_page_size += iterator->size - iterator->start_pos;
         }
 
         strcpy(previous_var, iterator->var_name);
         iterator = iterator->prev;
     }
-
-    arrange_allocated_pointers(allocation, task);
-    allocation->logic_page = last_page_size >= PAGE_SIZE ? last->logic_page + 1 : last->logic_page;
 
     // this is a page split
     if (!strcmp(last->var_name, var_name)) {
@@ -130,11 +125,21 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
 
     strcpy(allocation->var_name, var_name);
     size_t available = PAGE_SIZE - last_page_size;
-    allocation->index = PAGE_SIZE - available;
+    allocation->logic_page = last_page_size >= PAGE_SIZE ? last->logic_page + 1 : last->logic_page;
+
+//    allocation->index = last->logic_page * PAGE_SIZE + last_page_size; // TODO - PAREI AQUI
+//    if (available > 0)
+//        allocation->index += (PAGE_SIZE - available);
+//    else
+//        allocation->index += PAGE_SIZE + 1;
+
+    if (available == 0) {
+        available = PAGE_SIZE;
+    }
 
     if (available < size) {
-        size_t remaining = size - available;
-        return allocate_memory(var_name, remaining, task);
+        size_t remains = size - available;
+        return allocate_memory(var_name, remains, task);
     }
 
     return 1;
@@ -145,6 +150,7 @@ int access_memory(const char *var_name, size_t position, const Task *task) {
         return 0;
 
     Allocation *iterator = task->first;
+
     while (iterator) {
         if (!strcmp(var_name, iterator->var_name)) {
             if (position >= iterator->size)
@@ -163,12 +169,21 @@ int access_memory(const char *var_name, size_t position, const Task *task) {
 
 int main(int argc, char **argv) {
     Task t;
-    init_task(&t, 150);
+    init_task(&t, 512);
 
-    allocate_memory("v", 363, &t);
-    allocate_memory("x", 50, &t);
+//    allocate_memory("v", 363, &t);
+    if (allocate_memory("z", 512, &t))
+        printf("SUCESS Z");
+    if (allocate_memory("x", 512, &t))
+        printf("SUCESS X");
+    if (allocate_memory("y", 512, &t))
+        printf("SUCESS y");
+    if (allocate_memory("a", 512, &t))
+        printf("SUCESS a");
 
-    printf("ACESSO MEMORIA %d", access_memory("x", 10, &t));
+//    allocate_memory("k", 150, &t);
+
+    // printf("ACESSO MEMORIA %d", access_memory("j", 49, &t));
 
     return 0;
 }
