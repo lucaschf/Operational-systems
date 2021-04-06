@@ -141,32 +141,6 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
     return 1;
 }
 
-int access_memory(const char *var_name, size_t position, const Task *task) {
-    if (!var_name || !task->first)
-        return 0;
-
-    Allocation *iterator = task->first;
-
-    while (iterator) {
-        if (!strcmp(var_name, iterator->var_name)) {
-            if (position >= iterator->size)
-                return -1; // Access violation
-
-            if ((PAGE_SIZE - iterator->start_pos) - 1 >= position) {
-                int physical_page = SYSTEM_MEMORY / PAGE_SIZE + iterator->logic_page;
-                int physical_address = SYSTEM_MEMORY + (iterator->logic_page * PAGE_SIZE) + iterator->index + position;
-                printf("\nPhysical address: %d: %d", physical_page, physical_address);
-
-                return (int) (iterator->start_pos + position + iterator->index);
-            }
-        }
-
-        iterator = iterator->next;
-    }
-
-    return 0;
-}
-
 memory_address new_memory_address(int logic_page, int logic_address, int physical_page, int physical_address) {
     memory_address result;
     result.logic_page.page = logic_page;
@@ -177,45 +151,44 @@ memory_address new_memory_address(int logic_page, int logic_address, int physica
     return result;
 }
 
-memory_address access_memory2(const char *var_name, size_t position, const Task *task) {
+int access_memory(const char *var_name, size_t index, const Task *task, memory_address *address) {
     memory_address access_violation = new_memory_address(-1, -1, -1, -1);
+    *address = access_violation;
 
     if (!var_name || !task->first) {
-        return access_violation;
+        return 0; // no variable
     }
 
     Allocation *iterator = task->first;
 
     while (iterator) {
         if (!strcmp(var_name, iterator->var_name)) {
-            if (position >= iterator->size)
-                return access_violation; // Access violation
+            if (index >= iterator->size)
+                return -1; // Access violation
 
-            if ((PAGE_SIZE - iterator->start_pos) - 1 >= position) {
+            if ((PAGE_SIZE - iterator->start_pos) - 1 >= index) {
                 int physical_page = SYSTEM_MEMORY / PAGE_SIZE + iterator->logic_page;
-                int physical_address = SYSTEM_MEMORY + (iterator->logic_page * PAGE_SIZE) + iterator->index + position;
+                int physical_address = SYSTEM_MEMORY + (iterator->logic_page * PAGE_SIZE) + iterator->index + index;
 
-                return new_memory_address(
+                *address = new_memory_address(
                         iterator->logic_page,
-                        (int) (iterator->index + position),
+                        (int) (iterator->index + index),
                         physical_page,
                         physical_address
                 );
+
+                return 1;
             }
         }
 
         iterator = iterator->next;
     }
 
-    return access_violation;
+    // no var found
+    return 0;
 }
 
 void show_address(memory_address address) {
-    if(address.logic_page.page == -1){
-        printf("\nAcesso invalido a memoria\n");
-        return;
-    }
-
     printf("\nEndereco logico = %d: %d", address.logic_page.page, address.logic_page.address);
     printf("\nEndereco fisico = %d: %d\n", address.physical_page.page, address.physical_page.address);
 }
@@ -229,13 +202,33 @@ int main(int argc, char **argv) {
     allocate_memory("v3", 300, &t);
     allocate_memory("v4", 100, &t);
 
-    show_address(access_memory2("v", 10, &t));
-    show_address(access_memory2("v2", 15, &t));
-    show_address(access_memory2("v3", 0, &t));
-    show_address(access_memory2("v3", 300, &t));
-    show_address(access_memory2("v4", 0, &t));
+    memory_address address;
+    if (access_memory("v", 10, &t, &address) == 1)
+        show_address(address);
+    else
+        printf("\nAcesso invalido a memoria");
 
-    printf("Last page: %d", t.last->logic_page);
+    if (access_memory("v2", 15, &t, &address) == 1)
+        show_address(address);
+    else
+        printf("\nAcesso invalido a memoria");
+
+    if (access_memory("v3", 0, &t, &address) == 1)
+        show_address(address);
+    else
+        printf("\nAcesso invalido a memoria");
+
+    if (access_memory("v3", 300, &t, &address) == 1)
+        show_address(address);
+    else
+        printf("\nAcesso invalido a memoria");
+
+    if (access_memory("v4", 0, &t, &address) == 1)
+        show_address(address);
+    else
+        printf("\nAcesso invalido a memoria");
+
+    printf("\nLast logic page: %d", t.last->logic_page);
 
     return 0;
 }

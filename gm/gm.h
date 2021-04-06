@@ -43,6 +43,6 @@ int allocate_memory(const char *var_name, size_t size, Task *task);
 
 memory_address new_memory_address(int logic_page, int logic_address, int physical_page, int physical_address);
 
-int access_memory(const char *var_name, size_t size, const Task *task);
+int access_memory(const char *var_name, size_t index, const Task *task, memory_address *address);
 
 #endif //GM_GM_H
