@@ -76,27 +76,27 @@ include CMakeFiles/gm.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/gm.dir/flags.make
 
-CMakeFiles/gm.dir/main.c.obj: CMakeFiles/gm.dir/flags.make
-CMakeFiles/gm.dir/main.c.obj: ../main.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="F:\TSI\2nd period\Operational systems\Operational-systems\gm\cmake-build-debug\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/gm.dir/main.c.obj"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles\gm.dir\main.c.obj   -c "F:\TSI\2nd period\Operational systems\Operational-systems\gm\main.c"
+CMakeFiles/gm.dir/gm.c.obj: CMakeFiles/gm.dir/flags.make
+CMakeFiles/gm.dir/gm.c.obj: ../gm.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="F:\TSI\2nd period\Operational systems\Operational-systems\gm\cmake-build-debug\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/gm.dir/gm.c.obj"
+	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles\gm.dir\gm.c.obj   -c "F:\TSI\2nd period\Operational systems\Operational-systems\gm\gm.c"
 
-CMakeFiles/gm.dir/main.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/gm.dir/main.c.i"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E "F:\TSI\2nd period\Operational systems\Operational-systems\gm\main.c" > CMakeFiles\gm.dir\main.c.i
+CMakeFiles/gm.dir/gm.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/gm.dir/gm.c.i"
+	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E "F:\TSI\2nd period\Operational systems\Operational-systems\gm\gm.c" > CMakeFiles\gm.dir\gm.c.i
 
-CMakeFiles/gm.dir/main.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/gm.dir/main.c.s"
-	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S "F:\TSI\2nd period\Operational systems\Operational-systems\gm\main.c" -o CMakeFiles\gm.dir\main.c.s
+CMakeFiles/gm.dir/gm.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/gm.dir/gm.c.s"
+	C:\PROGRA~2\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S "F:\TSI\2nd period\Operational systems\Operational-systems\gm\gm.c" -o CMakeFiles\gm.dir\gm.c.s
 
 # Object files for target gm
 gm_OBJECTS = \
-"CMakeFiles/gm.dir/main.c.obj"
+"CMakeFiles/gm.dir/gm.c.obj"
 
 # External object files for target gm
 gm_EXTERNAL_OBJECTS =
 
-gm.exe: CMakeFiles/gm.dir/main.c.obj
+gm.exe: CMakeFiles/gm.dir/gm.c.obj
 gm.exe: CMakeFiles/gm.dir/build.make
 gm.exe: CMakeFiles/gm.dir/linklibs.rsp
 gm.exe: CMakeFiles/gm.dir/objects1.rsp

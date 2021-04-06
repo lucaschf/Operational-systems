@@ -142,32 +142,32 @@ gm/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\gm.dir\build.make CMakeFiles/gm.dir/build
 .PHONY : gm/fast
 
-main.obj: main.c.obj
+gm.obj: gm.c.obj
 
-.PHONY : main.obj
+.PHONY : gm.obj
 
 # target to build an object file
-main.c.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\gm.dir\build.make CMakeFiles/gm.dir/main.c.obj
-.PHONY : main.c.obj
+gm.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\gm.dir\build.make CMakeFiles/gm.dir/gm.c.obj
+.PHONY : gm.c.obj
 
-main.i: main.c.i
+gm.i: gm.c.i
 
-.PHONY : main.i
+.PHONY : gm.i
 
 # target to preprocess a source file
-main.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\gm.dir\build.make CMakeFiles/gm.dir/main.c.i
-.PHONY : main.c.i
+gm.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\gm.dir\build.make CMakeFiles/gm.dir/gm.c.i
+.PHONY : gm.c.i
 
-main.s: main.c.s
+gm.s: gm.c.s
 
-.PHONY : main.s
+.PHONY : gm.s
 
 # target to generate assembly for a file
-main.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\gm.dir\build.make CMakeFiles/gm.dir/main.c.s
-.PHONY : main.c.s
+gm.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\gm.dir\build.make CMakeFiles/gm.dir/gm.c.s
+.PHONY : gm.c.s
 
 # Help Target
 help:
@@ -178,9 +178,9 @@ help:
 	@echo ... edit_cache
 	@echo ... rebuild_cache
 	@echo ... gm
-	@echo ... main.obj
-	@echo ... main.i
-	@echo ... main.s
+	@echo ... gm.obj
+	@echo ... gm.i
+	@echo ... gm.s
 .PHONY : help
 
 

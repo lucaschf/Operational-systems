@@ -74,10 +74,10 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="F:/TSI/2nd period/Operational systems/Operational-systems/gm/gm.h">
+		<Unit filename="F:/TSI/2nd period/Operational systems/Operational-systems/gm/gm.c">
 			<Option target="gm"/>
 		</Unit>
-		<Unit filename="F:/TSI/2nd period/Operational systems/Operational-systems/gm/main.c">
+		<Unit filename="F:/TSI/2nd period/Operational systems/Operational-systems/gm/gm.h">
 			<Option target="gm"/>
 		</Unit>
 		<Unit filename="F:/TSI/2nd period/Operational systems/Operational-systems/gm/CMakeLists.txt">

@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/gm.dir/main.c.obj"
+  "CMakeFiles/gm.dir/gm.c.obj"
   "gm.exe"
   "gm.exe.manifest"
   "gm.pdb"

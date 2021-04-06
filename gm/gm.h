@@ -8,6 +8,7 @@
 #define TASK_LOGICAL_MEMORY 4096 // bytes - 4K
 #define PAGE_SIZE 512 // bytes
 #define VAR_NAME_LENGTH 50 // bytes
+#define SYSTEM_MEMORY 20480 // bytes
 
 typedef struct {
     unsigned short cpu_time;
@@ -26,9 +27,21 @@ typedef struct Allocation {
     struct Allocation *prev;
 } Allocation;
 
+typedef struct {
+    int page;
+    int address;
+} page_address;
+
+typedef struct {
+    page_address logic_page;
+    page_address physical_page;
+} memory_address;
+
 int ends_with(const char *str, const char *end);
 
 int allocate_memory(const char *var_name, size_t size, Task *task);
+
+memory_address new_memory_address(int logic_page, int logic_address, int physical_page, int physical_address);
 
 int access_memory(const char *var_name, size_t size, const Task *task);
 

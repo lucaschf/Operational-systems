@@ -153,6 +153,10 @@ int access_memory(const char *var_name, size_t position, const Task *task) {
                 return -1; // Access violation
 
             if ((PAGE_SIZE - iterator->start_pos) - 1 >= position) {
+                int physical_page = SYSTEM_MEMORY / PAGE_SIZE + iterator->logic_page;
+                int physical_address = SYSTEM_MEMORY + (iterator->logic_page * PAGE_SIZE) + iterator->index + position;
+                printf("\nPhysical address: %d: %d", physical_page, physical_address);
+
                 return (int) (iterator->start_pos + position + iterator->index);
             }
         }
@@ -163,27 +167,75 @@ int access_memory(const char *var_name, size_t position, const Task *task) {
     return 0;
 }
 
+memory_address new_memory_address(int logic_page, int logic_address, int physical_page, int physical_address) {
+    memory_address result;
+    result.logic_page.page = logic_page;
+    result.logic_page.address = logic_address;
+    result.physical_page.page = physical_page;
+    result.physical_page.address = physical_address;
+
+    return result;
+}
+
+memory_address access_memory2(const char *var_name, size_t position, const Task *task) {
+    memory_address access_violation = new_memory_address(-1, -1, -1, -1);
+
+    if (!var_name || !task->first) {
+        return access_violation;
+    }
+
+    Allocation *iterator = task->first;
+
+    while (iterator) {
+        if (!strcmp(var_name, iterator->var_name)) {
+            if (position >= iterator->size)
+                return access_violation; // Access violation
+
+            if ((PAGE_SIZE - iterator->start_pos) - 1 >= position) {
+                int physical_page = SYSTEM_MEMORY / PAGE_SIZE + iterator->logic_page;
+                int physical_address = SYSTEM_MEMORY + (iterator->logic_page * PAGE_SIZE) + iterator->index + position;
+
+                return new_memory_address(
+                        iterator->logic_page,
+                        (int) (iterator->index + position),
+                        physical_page,
+                        physical_address
+                );
+            }
+        }
+
+        iterator = iterator->next;
+    }
+
+    return access_violation;
+}
+
+void show_address(memory_address address) {
+    if(address.logic_page.page == -1){
+        printf("\nAcesso invalido a memoria\n");
+        return;
+    }
+
+    printf("\nEndereco logico = %d: %d", address.logic_page.page, address.logic_page.address);
+    printf("\nEndereco fisico = %d: %d\n", address.physical_page.page, address.physical_page.address);
+}
+
 int main(int argc, char **argv) {
     Task t;
-    init_task(&t, 512);
+    init_task(&t, 150);
 
-//    allocate_memory("v", 363, &t);
-    if (allocate_memory("z", 512, &t))
-        printf("SUCESS Z");
-    if (allocate_memory("x", 512, &t))
-        printf("SUCESS X");
-    if (allocate_memory("y", 512, &t))
-        printf("SUCESS y");
-    if (allocate_memory("a", 512, &t))
-        printf("SUCESS a");
-    if (allocate_memory("j", 50, &t))
-        printf("SUCESS j");
-    if (allocate_memory("k", 70, &t))
-        printf("SUCESS k");
+    allocate_memory("v", 100, &t);
+    allocate_memory("v2", 50, &t);
+    allocate_memory("v3", 300, &t);
+    allocate_memory("v4", 100, &t);
 
-//    allocate_memory("k", 150, &t);
+    show_address(access_memory2("v", 10, &t));
+    show_address(access_memory2("v2", 15, &t));
+    show_address(access_memory2("v3", 0, &t));
+    show_address(access_memory2("v3", 300, &t));
+    show_address(access_memory2("v4", 0, &t));
 
-    // printf("ACESSO MEMORIA %d", access_memory("j", 49, &t));
+    printf("Last page: %d", t.last->logic_page);
 
     return 0;
 }

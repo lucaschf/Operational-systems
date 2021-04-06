@@ -3,4 +3,4 @@ project(gm C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(gm main.c gm.h)
+add_executable(gm gm.c gm.h)
