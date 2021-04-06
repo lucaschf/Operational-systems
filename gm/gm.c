@@ -198,35 +198,25 @@ int access_memory(const char *var_name, size_t index, const Task *task, memory_a
     Allocation *iterator = task->first;
 
     while (iterator) {
-        if(address->allocation && strcmp(address->allocation->var_name, iterator->var_name) != 0)
-            *address = access_violation;
+//        if(address->allocation && strcmp(address->allocation->var_name, iterator->var_name) != 0)
+//            *address = access_violation;
 
         if (!strcmp(var_name, iterator->var_name)) {
-            if (index >= iterator->size)
-                return -1; // Access violation
 
-            int fistIndex = iterator->logic_page * PAGE_SIZE;
-            int remaining_index = iterator->index - fistIndex - 1;
+            size_t last_index = (PAGE_SIZE * (iterator->logic_page + 1)) - 1;
 
+            if(last_index + iterator->start_pos >= index){
 
-            size_t target = index - iterator->start_pos;
-
-            if (target > remaining_index) {
-                iterator = iterator->next;
-                continue;
-            } // found var but the index is not in this page - try next
-
-            if (target <= remaining_index) {
                 int physical_page = (SYSTEM_MEMORY / PAGE_SIZE) + iterator->logic_page;
-                int physical_address = SYSTEM_MEMORY
-                                       + (iterator->logic_page * PAGE_SIZE)
-                                       + iterator->index + target;
+                int physical_address =
+                        SYSTEM_MEMORY + iterator->index + index - iterator->start_pos - 1;
+
 
                 *address = new_memory_address(
                         iterator,
                         index,
                         iterator->logic_page,
-                        (int) (iterator->index + target),
+                        (int) ((iterator->index + index - iterator->start_pos) - iterator->logic_page * PAGE_SIZE) - 1,
                         physical_page,
                         physical_address
                 );
@@ -309,6 +299,7 @@ void run(int argc, char **argv) {
     execute_instructions(&task, instructions_file);
 
     printf(">> Tempo de cpu: %d", task.cpu_time);
+    printf("\n>> Tamanho final da tarefa: %d bytes", task.size);
     printf("\n>> Numero de paginas logicas: %d", task.last ? task.last->logic_page + 1 : 0);
     show_allocation_ranges(task);
     show_allocation_index(task);
