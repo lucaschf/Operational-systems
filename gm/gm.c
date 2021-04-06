@@ -182,7 +182,13 @@ memory_address new_memory_address(
 }
 
 int access_memory(const char *var_name, size_t index, const Task *task, memory_address *address) {
-    memory_address access_violation = new_memory_address(NULL, -1, -1, -1, -1, -1);
+    memory_address access_violation = new_memory_address(
+            NULL,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1);
     *address = access_violation;
 
     if (!var_name || !task->first) {
@@ -192,27 +198,35 @@ int access_memory(const char *var_name, size_t index, const Task *task, memory_a
     Allocation *iterator = task->first;
 
     while (iterator) {
-        if (!strcmp(var_name, iterator->var_name)) {
+        if(address->allocation && strcmp(address->allocation->var_name, iterator->var_name) != 0)
+            *address = access_violation;
 
+        if (!strcmp(var_name, iterator->var_name)) {
             if (index >= iterator->size)
                 return -1; // Access violation
 
-            if (PAGE_SIZE - iterator->start_pos < index) {
+            int fistIndex = iterator->logic_page * PAGE_SIZE;
+            int remaining_index = iterator->index - fistIndex - 1;
+
+
+            size_t target = index - iterator->start_pos;
+
+            if (target > remaining_index) {
                 iterator = iterator->next;
                 continue;
             } // found var but the index is not in this page - try next
 
-            if ((PAGE_SIZE - iterator->start_pos) - 1 >= index) {
+            if (target <= remaining_index) {
                 int physical_page = (SYSTEM_MEMORY / PAGE_SIZE) + iterator->logic_page;
                 int physical_address = SYSTEM_MEMORY
                                        + (iterator->logic_page * PAGE_SIZE)
-                                       + iterator->index + index;
+                                       + iterator->index + target;
 
                 *address = new_memory_address(
                         iterator,
                         index,
                         iterator->logic_page,
-                        (int) (iterator->index + index),
+                        (int) (iterator->index + target),
                         physical_page,
                         physical_address
                 );
@@ -314,30 +328,28 @@ void show_allocation_ranges(Task task) {
     memory_address end;
 
     while (iterator) {
+        // task code
         if (!strcmp(iterator->var_name, ""))
             iterator = iterator->next;
 
-        size_t logic_page = iterator->logic_page;
-        size_t physical_page = iterator->logic_page + (SYSTEM_MEMORY / PAGE_SIZE);
-        size_t last_index = (PAGE_SIZE * logic_page) - 1;
+        size_t last_index = (PAGE_SIZE * (iterator->logic_page + 1)) - 1;
 
         if (iterator->start_pos == 0) {
-            start.logic_page.page = logic_page;
-            start.logic_page.address = (int) (iterator->index - logic_page * PAGE_SIZE);
+            start.logic_page.page = iterator->logic_page;
+            start.logic_page.address = (int) (iterator->index - iterator->logic_page * PAGE_SIZE);
 
-            start.physical_page.page = physical_page;
-            start.physical_page.address = (int) (SYSTEM_MEMORY + (iterator->index - logic_page * PAGE_SIZE));
+            start.physical_page.page = (SYSTEM_MEMORY / PAGE_SIZE) + iterator->logic_page;
+            start.physical_page.address = (int) (SYSTEM_MEMORY + (iterator->index - iterator->logic_page * PAGE_SIZE));
         }
 
         size_t end_index = (iterator->size - iterator->start_pos) + iterator->index;
         if (end_index <= last_index) {
-            end.logic_page.page = logic_page;
+            end.logic_page.page = iterator->logic_page;
             end.logic_page.address =
-                    (int) ((iterator->index + iterator->size - iterator->start_pos) - logic_page * PAGE_SIZE) - 1;
-            end.physical_page.page = physical_page;
-            end.physical_page.address = (int)
-                    (SYSTEM_MEMORY +
-                     (iterator->index + (iterator->size - iterator->start_pos) - logic_page * PAGE_SIZE) - 1);
+                    (int) ((iterator->index + iterator->size - iterator->start_pos) - iterator->logic_page * PAGE_SIZE) - 1;
+            end.physical_page.page = (SYSTEM_MEMORY / PAGE_SIZE) + iterator->logic_page;
+            end.physical_page.address =
+                    SYSTEM_MEMORY + iterator->index + iterator->size - iterator->start_pos - 1;
 
             printf("\n\t%s[%d]\n", iterator->var_name, iterator->size);
             show_address_interval(start, end);
@@ -363,18 +375,18 @@ void show_address_interval(memory_address start, memory_address anEnd) {
 }
 
 void show_allocation_index(Task task) {
-    printf("\n\n>> Enderecos acessados:\n");
+    printf("\n>> Enderecos acessados:\n");
 
     int i;
 
-    for(i = 0; i<task.memory_accesses; i++){
+    for (i = 0; i < task.memory_accesses; i++) {
         memory_address m = task.accesses[i];
         printf("\n\t%s[%d]\n", m.allocation->var_name, m.accessed_index);
         printf("\tEndereco logico = %d : %d\n", m.logic_page.page, m.logic_page.address);
         printf("\tEndereco fisico = %d : %d\n", m.physical_page.page, m.physical_page.address);
     }
 
-    if(i == 0)
+    if (i == 0)
         printf("\n\tNenhum acesso a memoria realizado");
 }
 
@@ -423,7 +435,7 @@ void execute_instructions(Task *task, FILE *instructions_file) {
     }
 }
 
-int execute_access(char instruction[50], Task *task) {
+int execute_access(char instruction[], Task *task) {
 
     // malformed instruction
     if (starts_with(instruction, "[") || starts_with("]", instruction)) {
@@ -481,6 +493,9 @@ int execute_allocation(char instruction[50], Task *task) {
 }
 
 int main(int argc, char **argv) {
+    argc = 2;
+    argv[1] = "C:\\Users\\lucas\\Desktop\\t1";
+
     run(argc, argv);
     return 0;
 }
