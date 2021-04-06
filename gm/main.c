@@ -47,8 +47,7 @@ int init_task(Task *t, size_t size) {
     return allocate_memory("", size, t);
 }
 
-void manage_pointer(Allocation *allocation, Task *task) {
-
+void arrange_allocated_pointers(Allocation *allocation, Task *task) {
     if (!task->first) {
         allocation->next = allocation;
         task->first = allocation;
@@ -56,6 +55,7 @@ void manage_pointer(Allocation *allocation, Task *task) {
         task->last = allocation;
         task->last->prev = NULL;
         task->last->next = NULL;
+
         return;
     }
 
@@ -85,11 +85,12 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
         allocation->logic_page = 0; // single task program means always starting on first page
         allocation->size = size;
         strcpy(allocation->var_name, var_name);
-        manage_pointer(allocation, task);
+        arrange_allocated_pointers(allocation, task);
 
-        if (size > PAGE_SIZE) {
+        if (size > PAGE_SIZE) { // split in more pages
             return allocate_memory(var_name, size - PAGE_SIZE, task);
         }
+
         return 1;
     }
 
@@ -98,8 +99,9 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
         return 0;
 
     Allocation *last = task->last;
-    Allocation *iterator = last;
 
+    // iterates over previous allocations summing allocation sizes
+    Allocation *iterator = last;
     char previous_var[VAR_NAME_LENGTH] = "";
     strcpy(previous_var, last->var_name);
     size_t last_page_size = iterator->size;
@@ -113,20 +115,22 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
         iterator = iterator->prev;
     }
 
-    manage_pointer(allocation, task);
-
+    arrange_allocated_pointers(allocation, task);
     allocation->logic_page = last_page_size >= PAGE_SIZE ? last->logic_page + 1 : last->logic_page;
 
-    if (strcmp(last->var_name, var_name) != 0) {
+    // this is a page split
+    if (!strcmp(last->var_name, var_name)) {
+        allocation->size = last->size;
+        allocation->start_pos = allocation->size - size;
+    } else {
         allocation->size = size;
+        allocation->start_pos = 0;
         task->size += size;
-    } else
-        allocation->size = task->last->size;
+    }
 
     strcpy(allocation->var_name, var_name);
     size_t available = PAGE_SIZE - last_page_size;
-    allocation->
-            index = PAGE_SIZE - available;
+    allocation->index = PAGE_SIZE - available;
 
     if (available < size) {
         size_t remaining = size - available;
@@ -141,5 +145,6 @@ int main(int argc, char **argv) {
     init_task(&t, 150);
 
     allocate_memory("v", 363, &t);
+    allocate_memory("x", 50, &t);
     return 0;
 }
