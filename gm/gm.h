@@ -43,6 +43,7 @@ typedef struct {
     struct Allocation *last;
     memory_address accesses[PAGE_SIZE];
     int memory_accesses;
+    int aborted;
 } Task;
 
 int ends_with(const char *str, const char *end);

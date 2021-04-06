@@ -62,6 +62,7 @@ FILE *open_file(char *file_name) {
 int init_task(Task *t, size_t size) {
     t->size = size;
     t->cpu_time = 0;
+    t->aborted = 0;
 
     t->last = NULL;
     t->first = NULL;
@@ -299,12 +300,14 @@ void run(int argc, char **argv) {
 
     execute_instructions(&task, instructions_file);
 
-    printf(">> Tempo de cpu: %d", task.cpu_time);
-    printf("\n>> Tamanho final da tarefa: %d bytes", task.size);
-    printf("\n>> Numero de paginas logicas: %d", task.last ? task.last->logic_page + 1 : 0);
-    show_allocation_ranges(task);
-    show_allocation_index(task);
-    show_pages_ranges(task);
+    if (!task.aborted) {
+        printf(">> Tempo de cpu: %d", task.cpu_time);
+        printf("\n>> Tamanho final da tarefa: %d bytes", task.size);
+        printf("\n>> Numero de paginas logicas: %d", task.last ? task.last->logic_page + 1 : 0);
+        show_allocation_ranges(task);
+        show_allocation_index(task);
+        show_pages_ranges(task);
+    }
 
     free_up_memory(&task);
     fclose(instructions_file);
@@ -426,6 +429,7 @@ void execute_instructions(Task *task, FILE *instructions_file) {
         }
 
         printf("\nA tarefa %s foi cancelada porque tem a instrucao invalida \"%s\".", task->name, instruction);
+        task->aborted = 1;
         return;
     }
 }
