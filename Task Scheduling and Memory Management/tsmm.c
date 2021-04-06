@@ -702,8 +702,8 @@ int accessMemory(Task *task, char identifier[], int position) {
     for (int i = 0; i < system_.pagesCount; i++) {
         Page p = system_.pages[i];
 
-        if (p.taskIdentifier != task->id)
-            continue;
+//        if (p.taskIdentifier != task->id)
+//            continue;
 
         if (!strcmp(p.logicalMemory[0].identifier, identifier)) {
             if (p.addressesCount > position) { // accepted address

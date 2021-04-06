@@ -3,9 +3,29 @@
 #include <stdlib.h>
 #include "gm.h"
 
+void run(int argc, char **argv);
+
+void execute_instructions(Task *task, FILE *instructions_file);
+
+int execute_allocation(char instruction[50], Task *task);
+
+int execute_access(char instruction[50], Task *task);
+
+void show_pages_ranges(Task task);
+
+void show_allocation_ranges(Task task);
+
+void show_allocation_index(Task task);
+
+void show_address_interval(memory_address start, memory_address anEnd);
+
 //region utils
 int ends_with(const char *str, const char *end) {
     return strcmp(str + strlen(str) - strlen(end), end) == 0;
+}
+
+int starts_with(const char *str, const char *prefix) {
+    return strncmp(prefix, str, strlen(prefix)) == 0;
 }
 
 void remove_newline(char *str) {
@@ -16,6 +36,10 @@ void remove_newline(char *str) {
 
     if (str[length - 1] == '\n' || str[length - 1] == '\r')
         str[length - 1] = '\0';
+}
+
+int contains(const char *str, const char *another) {
+    return strstr(str, another) != NULL;
 }
 
 FILE *open_file(char *file_name) {
@@ -41,6 +65,7 @@ int init_task(Task *t, size_t size) {
 
     t->last = NULL;
     t->first = NULL;
+    t->memory_accesses = 0;
 
     return allocate_memory("", size, t);
 }
@@ -124,11 +149,7 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
     }
 
     strcpy(allocation->var_name, var_name);
-    size_t available = PAGE_SIZE - last_page_size;
-
-    if (available == 0) {
-        available = PAGE_SIZE;
-    }
+    size_t available = last_page_size < PAGE_SIZE ? PAGE_SIZE - last_page_size : PAGE_SIZE;
 
     allocation->logic_page = PAGE_SIZE <= last_page_size ? last->logic_page + 1 : last->logic_page;
     allocation->index = allocation->logic_page * PAGE_SIZE + (PAGE_SIZE - available);
@@ -141,8 +162,17 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
     return 1;
 }
 
-memory_address new_memory_address(int logic_page, int logic_address, int physical_page, int physical_address) {
+memory_address new_memory_address(
+        const Allocation *allocation,
+        int pos,
+        int logic_page,
+        int logic_address,
+        int physical_page,
+        int physical_address
+) {
     memory_address result;
+    result.allocation = allocation;
+    result.accessed_index = pos;
     result.logic_page.page = logic_page;
     result.logic_page.address = logic_address;
     result.physical_page.page = physical_page;
@@ -152,7 +182,7 @@ memory_address new_memory_address(int logic_page, int logic_address, int physica
 }
 
 int access_memory(const char *var_name, size_t index, const Task *task, memory_address *address) {
-    memory_address access_violation = new_memory_address(-1, -1, -1, -1);
+    memory_address access_violation = new_memory_address(NULL, -1, -1, -1, -1, -1);
     *address = access_violation;
 
     if (!var_name || !task->first) {
@@ -163,14 +193,24 @@ int access_memory(const char *var_name, size_t index, const Task *task, memory_a
 
     while (iterator) {
         if (!strcmp(var_name, iterator->var_name)) {
+
             if (index >= iterator->size)
                 return -1; // Access violation
 
+            if (PAGE_SIZE - iterator->start_pos < index) {
+                iterator = iterator->next;
+                continue;
+            } // found var but the index is not in this page - try next
+
             if ((PAGE_SIZE - iterator->start_pos) - 1 >= index) {
-                int physical_page = SYSTEM_MEMORY / PAGE_SIZE + iterator->logic_page;
-                int physical_address = SYSTEM_MEMORY + (iterator->logic_page * PAGE_SIZE) + iterator->index + index;
+                int physical_page = (SYSTEM_MEMORY / PAGE_SIZE) + iterator->logic_page;
+                int physical_address = SYSTEM_MEMORY
+                                       + (iterator->logic_page * PAGE_SIZE)
+                                       + iterator->index + index;
 
                 *address = new_memory_address(
+                        iterator,
+                        index,
                         iterator->logic_page,
                         (int) (iterator->index + index),
                         physical_page,
@@ -188,47 +228,259 @@ int access_memory(const char *var_name, size_t index, const Task *task, memory_a
     return 0;
 }
 
-void show_address(memory_address address) {
-    printf("\nEndereco logico = %d: %d", address.logic_page.page, address.logic_page.address);
-    printf("\nEndereco fisico = %d: %d\n", address.physical_page.page, address.physical_page.address);
+void free_up_memory(Task *task) {
+    if (!task->first)
+        return;
+
+    Allocation *al = task->first;
+
+    while (task->first) {
+        task->first = task->first->next;
+        free(al);
+        al = task->first;
+    }
+
+    task->first = NULL;
+    task->last = NULL;
+}
+
+int get_task_size(FILE *f) {
+    const size_t length = 50;
+    char line[length];
+
+    rewind(f);
+
+    if (!fgets(line, length, f) || !starts_with(line, TASK_SIZE_DELIMITER)) {
+        return -1;
+    }
+
+    char *token = strtok(line, TASK_SIZE_DELIMITER);
+
+    if (token) {
+        return atoi(token); // NOLINT(cert-err34-c)
+    }
+
+    return -1;
+}
+
+void run(int argc, char **argv) {
+
+    if (argc != 2) {
+        printf("\nSintaxe incorreta");
+        exit(EXIT_FAILURE);
+    }
+
+    Task task;
+    FILE *instructions_file = open_file(argv[1]);
+
+    if (!instructions_file) {
+        printf("\nFalha ao abrir arquivo de instruções");
+        exit(EXIT_FAILURE);
+    }
+
+    int task_size = get_task_size(instructions_file);
+
+    if (task_size == -1) {
+        printf("\nLayout de arquivo incorreto");
+        fclose(instructions_file);
+        exit(EXIT_FAILURE);
+    }
+
+    if (init_task(&task, task_size) != 1) {
+        printf("\nFalha ao inicializar tarefa");
+        fclose(instructions_file);
+        exit(EXIT_FAILURE);
+    }
+
+    execute_instructions(&task, instructions_file);
+
+    printf(">> Tempo de cpu: %d", task.cpu_time);
+    printf("\n>> Numero de paginas logicas: %d", task.last ? task.last->logic_page + 1 : 0);
+    show_allocation_ranges(task);
+    show_allocation_index(task);
+    show_pages_ranges(task);
+
+    free_up_memory(&task);
+    fclose(instructions_file);
+}
+
+void show_allocation_ranges(Task task) {
+
+    Allocation *iterator = task.first;
+
+    printf("\n\n>> Faixa de enderecos de alocacao:\n");
+
+    memory_address start;
+    memory_address end;
+
+    while (iterator) {
+        if (!strcmp(iterator->var_name, ""))
+            iterator = iterator->next;
+
+        size_t logic_page = iterator->logic_page;
+        size_t physical_page = iterator->logic_page + (SYSTEM_MEMORY / PAGE_SIZE);
+        size_t last_index = (PAGE_SIZE * logic_page) - 1;
+
+        if (iterator->start_pos == 0) {
+            start.logic_page.page = logic_page;
+            start.logic_page.address = (int) (iterator->index - logic_page * PAGE_SIZE);
+
+            start.physical_page.page = physical_page;
+            start.physical_page.address = (int) (SYSTEM_MEMORY + (iterator->index - logic_page * PAGE_SIZE));
+        }
+
+        size_t end_index = (iterator->size - iterator->start_pos) + iterator->index;
+        if (end_index <= last_index) {
+            end.logic_page.page = logic_page;
+            end.logic_page.address =
+                    (int) ((iterator->index + iterator->size - iterator->start_pos) - logic_page * PAGE_SIZE) - 1;
+            end.physical_page.page = physical_page;
+            end.physical_page.address = (int)
+                    (SYSTEM_MEMORY +
+                     (iterator->index + (iterator->size - iterator->start_pos) - logic_page * PAGE_SIZE) - 1);
+
+            printf("\n\t%s[%d]\n", iterator->var_name, iterator->size);
+            show_address_interval(start, end);
+        }
+
+        iterator = iterator->next;
+    }
+}
+
+void show_address_interval(memory_address start, memory_address anEnd) {
+    printf("\tEnderecos logicos = (%d : %d) a (%d : %d)\n",
+           start.logic_page.page,
+           start.logic_page.address,
+           anEnd.logic_page.page,
+           anEnd.logic_page.address
+    );
+    printf("\tEnderecos fisicos = (%d : %d) a (%d : %d)\n",
+           start.physical_page.page,
+           start.physical_page.address,
+           anEnd.physical_page.page,
+           anEnd.physical_page.address
+    );
+}
+
+void show_allocation_index(Task task) {
+    printf("\n\n>> Enderecos acessados:\n");
+
+    int i;
+
+    for(i = 0; i<task.memory_accesses; i++){
+        memory_address m = task.accesses[i];
+        printf("\n\t%s[%d]\n", m.allocation->var_name, m.accessed_index);
+        printf("\tEndereco logico = %d : %d\n", m.logic_page.page, m.logic_page.address);
+        printf("\tEndereco fisico = %d : %d\n", m.physical_page.page, m.physical_page.address);
+    }
+
+    if(i == 0)
+        printf("\n\tNenhum acesso a memoria realizado");
+}
+
+void show_pages_ranges(Task task) {
+
+    printf("\n>> Tabela de paginas\n");
+    if (!task.last)
+        return;
+
+    for (int i = 0; i <= task.last->logic_page; i++) {
+        printf("\n\tPL %d (%d a %d)", i, i * PAGE_SIZE, PAGE_SIZE * (i + 1) - 1);
+        int physical_address_start = SYSTEM_MEMORY + PAGE_SIZE * (i);
+
+        printf(" --> PF %d (%d %d)",
+               (PAGE_SIZE / PAGE_SIZE) + i,
+               physical_address_start,
+               physical_address_start + PAGE_SIZE - 1);
+    }
+}
+
+void execute_instructions(Task *task, FILE *instructions_file) {
+    char instruction[INSTRUCTION_LENGTH];
+    const char key_access_start[] = "[";
+    const char key_access_end[] = "]";
+
+    while (fgets(instruction, INSTRUCTION_LENGTH, instructions_file)) {
+        remove_newline(instruction);
+
+        if (!strcmp(instruction, ""))
+            return;
+
+        if (contains(instruction, KEY_NEW)) {
+            if (execute_allocation(instruction, task)) {
+                task->cpu_time++;
+                continue;
+            }
+        } else if (contains(instruction, key_access_start) && contains(instruction, key_access_end)) {
+            if (execute_access(instruction, task)) {
+                task->cpu_time++;
+                continue;
+            } else
+                return;
+        }
+
+        printf("\nA tarefa %s foi cancelada porque tem a instrucao invalida \"%s\".", task->name, instruction);
+    }
+}
+
+int execute_access(char instruction[50], Task *task) {
+
+    // malformed instruction
+    if (starts_with(instruction, "[") || starts_with("]", instruction)) {
+        return 0;
+    }
+
+    char *var_name = strtok(instruction, "[");
+
+    if (var_name) {
+        char *str_pos = strtok(NULL, "]");
+        int pos;
+        if (str_pos) {
+            pos = atoi(str_pos);// NOLINT(cert-err34-c)
+            memory_address addr;
+
+            if (access_memory(var_name, pos, task, &addr) == 1) {
+                task->accesses[task->memory_accesses++] = addr;
+                return 1;
+            }
+
+            // no variable allocated or requested position is out of bounds
+            printf("\nA tarefa %s tentou realizar um acesso invalido a memoria na linha: %s\n",
+                   task->name,
+                   instruction
+            );
+
+            return 0;
+        }
+
+        return 0;
+    }
+
+    // malformed instruction
+    return 0;
+}
+
+int execute_allocation(char instruction[50], Task *task) {
+
+    // malformed instruction
+    if (starts_with(instruction, KEY_NEW) || ends_with(instruction, KEY_NEW)) {
+        return 0;
+    }
+
+    char *varName = strtok(instruction, " ");
+    if (varName) {
+        char *str_size = strtok(NULL, KEY_NEW);
+        int size;
+
+        if (str_size && (size = atoi(str_size)) > 0) // NOLINT(cert-err34-c)
+            return allocate_memory(varName, size, task);
+    }
+
+    // malformed instruction
+    return 0;
 }
 
 int main(int argc, char **argv) {
-    Task t;
-    init_task(&t, 150);
-
-    allocate_memory("v", 100, &t);
-    allocate_memory("v2", 50, &t);
-    allocate_memory("v3", 300, &t);
-    allocate_memory("v4", 100, &t);
-
-    memory_address address;
-    if (access_memory("v", 10, &t, &address) == 1)
-        show_address(address);
-    else
-        printf("\nAcesso invalido a memoria");
-
-    if (access_memory("v2", 15, &t, &address) == 1)
-        show_address(address);
-    else
-        printf("\nAcesso invalido a memoria");
-
-    if (access_memory("v3", 0, &t, &address) == 1)
-        show_address(address);
-    else
-        printf("\nAcesso invalido a memoria");
-
-    if (access_memory("v3", 300, &t, &address) == 1)
-        show_address(address);
-    else
-        printf("\nAcesso invalido a memoria");
-
-    if (access_memory("v4", 0, &t, &address) == 1)
-        show_address(address);
-    else
-        printf("\nAcesso invalido a memoria");
-
-    printf("\nLast logic page: %d", t.last->logic_page);
-
+    run(argc, argv);
     return 0;
 }
