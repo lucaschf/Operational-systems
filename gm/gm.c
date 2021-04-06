@@ -309,6 +309,8 @@ void run(int argc, char **argv) {
         show_pages_ranges(task);
     }
 
+    printf("\n");
+
     free_up_memory(&task);
     fclose(instructions_file);
 }
