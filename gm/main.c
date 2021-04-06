@@ -108,7 +108,7 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
 
     while (iterator && iterator->logic_page == last->logic_page) {
         if (strcmp(iterator->var_name, previous_var) != 0) {
-            last_page_size += iterator->size;
+            last_page_size += iterator->size - iterator->index;
         }
 
         strcpy(previous_var, iterator->var_name);

@@ -31,5 +31,4 @@ int ends_with(const char *str, const char *end);
 
 int allocate_memory(const char *var_name, size_t size, Task *task);
 
-
 #endif //GM_GM_H
