@@ -125,17 +125,13 @@ int allocate_memory(const char *var_name, size_t size, Task *task) {
 
     strcpy(allocation->var_name, var_name);
     size_t available = PAGE_SIZE - last_page_size;
-    allocation->logic_page = last_page_size >= PAGE_SIZE ? last->logic_page + 1 : last->logic_page;
-
-//    allocation->index = last->logic_page * PAGE_SIZE + last_page_size; // TODO - PAREI AQUI
-//    if (available > 0)
-//        allocation->index += (PAGE_SIZE - available);
-//    else
-//        allocation->index += PAGE_SIZE + 1;
 
     if (available == 0) {
         available = PAGE_SIZE;
     }
+
+    allocation->logic_page = PAGE_SIZE <= last_page_size ? last->logic_page + 1 : last->logic_page;
+    allocation->index = allocation->logic_page * PAGE_SIZE + (PAGE_SIZE - available);
 
     if (available < size) {
         size_t remains = size - available;
@@ -180,6 +176,10 @@ int main(int argc, char **argv) {
         printf("SUCESS y");
     if (allocate_memory("a", 512, &t))
         printf("SUCESS a");
+    if (allocate_memory("j", 50, &t))
+        printf("SUCESS j");
+    if (allocate_memory("k", 70, &t))
+        printf("SUCESS k");
 
 //    allocate_memory("k", 150, &t);
 
