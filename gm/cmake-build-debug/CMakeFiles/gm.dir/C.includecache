@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+F:/TSI/2nd period/Operational systems/Operational-systems/gm/gm.h
+
+F:/TSI/2nd period/Operational systems/Operational-systems/gm/main.c
+stdio.h
+-
+string.h
+-
+stdlib.h
+-
+gm.h
+F:/TSI/2nd period/Operational systems/Operational-systems/gm/gm.h
+

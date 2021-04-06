@@ -37,6 +37,8 @@ void geraHora(char strHora[]) {
 }
 
 Disco *criaDisco(char unidade, unsigned int capacidade) {
+    int i;
+
     if (buscaPorUnidade(unidade))
         return NULL;
 
@@ -52,7 +54,7 @@ Disco *criaDisco(char unidade, unsigned int capacidade) {
         disco->blocosLogicosOcupados = 0;
         disco->arquivosEmDisco = 0;
 
-        for (int i = 0; i < NUMERO_DE_ARQUIVOS_DO_DISCO; i++) {
+        for (i = 0; i < NUMERO_DE_ARQUIVOS_DO_DISCO; i++) {
             disco->tabelaArquivos[i] = NULL;
         }
     }
@@ -62,8 +64,9 @@ Disco *criaDisco(char unidade, unsigned int capacidade) {
 
 Disco *buscaPorUnidade(char unidade) {
     Disco *disco;
+    int i;
 
-    for (int i = 0; i < numeroDiscos; i++) {
+    for (i = 0; i < numeroDiscos; i++) {
         disco = discos[i];
 
         if (disco->unidade == unidade)
@@ -74,6 +77,7 @@ Disco *buscaPorUnidade(char unidade) {
 }
 
 int formatar(char unidade, Disco *disco) {
+    int i;
 
     if (!disco)
         return FALSE;
@@ -88,7 +92,7 @@ int formatar(char unidade, Disco *disco) {
     disco->blocosLogicosLivres = disco->blocosLogicosTotais;
     disco->arquivosEmDisco = 0;
 
-    for (int i = 0; i < NUMERO_DE_ARQUIVOS_DO_DISCO; i++) {
+    for (i = 0; i < NUMERO_DE_ARQUIVOS_DO_DISCO; i++) {
         free(disco->tabelaArquivos[i]);
         disco->tabelaArquivos[i] = NULL;
     }
@@ -138,13 +142,14 @@ unsigned short calculateFilePosition(unsigned short fd) {
 }
 
 Arquivo *buscaArquivo(const Disco *d, const char *nomeArquivo) {
+    int i;
 
     if (!d || !nomeArquivo)
         return NULL;
 
     Arquivo *arquivo;
 
-    for (int i = 0; i < d->arquivosEmDisco; i++) {
+    for (i = 0; i < d->arquivosEmDisco; i++) {
         arquivo = d->tabelaArquivos[i];
         if (!strcmp(nomeArquivo, arquivo->nome))
             return arquivo;
@@ -157,7 +162,7 @@ int abrir(char unidade, const char *nomeArquivo) {
     Arquivo *target = buscaArquivo(buscaPorUnidade(unidade), nomeArquivo);
 
     if (!target)
-        ERRO_ABRIR_ARQUIVO;
+        return ERRO_ABRIR_ARQUIVO;
 
     target->estado = ABERTO;
     return TRUE;
@@ -211,7 +216,8 @@ int escrever(char unidade, unsigned short fd, const void *buffer, unsigned int t
         if (tipoDeArquivo == STRING && arq->tipo == NUMERICO)
             return ERRO_ESCREVER_ARQUIVO;
 
-        realloc(arq->conteudo, arq->tamanho + bufferSize - recordSize);
+        if(!realloc(arq->conteudo, arq->tamanho + bufferSize - recordSize))
+            return ERRO_ESCREVER_ARQUIVO;
     }
 
     if (itemsWrote) {
@@ -219,7 +225,7 @@ int escrever(char unidade, unsigned short fd, const void *buffer, unsigned int t
         strcat(arq->conteudo, " ");
         itemsWrote++;
     }
-    memcpy(&arq->conteudo[itemsWrote], buffer, tamanho * recordSize);
+    memcpy((arq->conteudo)+itemsWrote, buffer, tamanho * recordSize);
 
     return (int) computeOccupiedSpace(d, arq, arq->tipo == NUMERICO ? items : tamanho);
 }
@@ -255,6 +261,7 @@ size_t calculateBlocks(unsigned int bufferSize) {
 unsigned short verificaTipoArquivo(TIPO_DE_ARQUIVO *tipoDeArquivo, const void *pVoid) {
     const char *data = (const char *) pVoid;
     int len;
+    int i;
     float ignore;
 
     const int digits = 100;
@@ -264,7 +271,7 @@ unsigned short verificaTipoArquivo(TIPO_DE_ARQUIVO *tipoDeArquivo, const void *p
 
     char splitData[MAX_PARAMS][PARAM_LENGTH];
     int c = tokenize(data, splitData, MAX_PARAMS, " ");
-    for (int i = 0; i < c; i++) {
+    for (i = 0; i < c; i++) {
         strcpy(temp, splitData[i]);
         int ret = sscanf(temp, "%f%n", &ignore, &len); // NOLINT(cert-err34-c)
         if (ret != 1 || temp[len])
@@ -287,7 +294,7 @@ int ler(char unidade, unsigned short fd, void *buffer, unsigned int tamanho) {
     //endregion
 
     if (tamanho > 0 && tamanho <= arq->tamanho) {
-        memcpy_s(buffer, tamanho, arq->conteudo, tamanho);
+        memcpy(buffer, arq->conteudo, tamanho);
         return tamanho == arq->tamanho ? FIM_DE_ARQUIVO : (int) tamanho;
     }
 
@@ -359,7 +366,8 @@ char *infoDisco(char unidade) {
     strcat(data, temp);
 
     int count = 1;
-    for (int i = 0; i < NUMERO_DE_ARQUIVOS_DO_DISCO && count <= d->arquivosEmDisco; i++) {
+    int i;
+    for (i = 0; i < NUMERO_DE_ARQUIVOS_DO_DISCO && count <= d->arquivosEmDisco; i++) {
         Arquivo *arq = d->tabelaArquivos[i];
 
         if (arq) {
@@ -459,7 +467,7 @@ void menu() {
     } while (1);
 }
 
-void execute(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void execute(int argc, char args[MAX_PARAMS][PARAM_LENGTH]) {
 
     const char *instruction = args[0];
 
@@ -550,7 +558,7 @@ Arquivo *checkArquivo(const Disco *d, const char *nome) {
     return arq;
 }
 
-void executaCriacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void executaCriacaoDisco(int argc, char args[MAX_PARAMS][PARAM_LENGTH]) {
 
     if (!checkSyntax(argc, 2))
         return;
@@ -579,7 +587,7 @@ void executaCriacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
         printf("%s\n", DISK_CREATION_FAILURE);
 }
 
-void executaCriacaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void executaCriacaoArquivo(int argc, char args[MAX_PARAMS][PARAM_LENGTH]) {
     if (!checkSyntax(argc, 3))
         return;
 
@@ -604,7 +612,7 @@ void executaCriacaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) 
         printf("%s\n", FILE_CREATION_FAILURE);
 }
 
-void executaEscritaArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void executaEscritaArquivo(int argc, char args[MAX_PARAMS][PARAM_LENGTH]) {
 
     if (argc < 3) {
         printf("%s\n", INCORRECT_SYNTAX);
@@ -622,7 +630,8 @@ void executaEscritaArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) 
     char args2[PARAM_LENGTH];
     strcpy(args2, args[3]);
 
-    for (int i = 4; i < argc; i++) {
+    int i;
+    for (i = 4; i < argc; i++) {
         strcat(args2, " ");
         strcat(args2, args[i]);
     }
@@ -637,7 +646,7 @@ void executaEscritaArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) 
     printf("%d bytes escritos no arquivo\n", result);
 }
 
-void executaLeituraArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void executaLeituraArquivo(int argc, char args[MAX_PARAMS][PARAM_LENGTH]) {
 
     if (!checkSyntax(argc, 3))
         return;
@@ -660,7 +669,7 @@ void executaLeituraArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) 
     printf("%s\n", ((char *) buff));
 }
 
-void manipulaEstadoAberturaArquivo(int argc, EstadoArquivo estado, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void manipulaEstadoAberturaArquivo(int argc, EstadoArquivo estado, char args[MAX_PARAMS][PARAM_LENGTH]) {
     if (!checkSyntax(argc, 3))
         return;
 
@@ -683,7 +692,7 @@ void manipulaEstadoAberturaArquivo(int argc, EstadoArquivo estado, const char ar
     }
 }
 
-void executaExclusaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void executaExclusaoArquivo(int argc, char args[MAX_PARAMS][PARAM_LENGTH]) {
     if (!checkSyntax(argc, 3))
         return;
 
@@ -701,7 +710,7 @@ void executaExclusaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH])
         printf("Falha ao excluir\n");
 }
 
-void executaFormatacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void executaFormatacaoDisco(int argc, char args[MAX_PARAMS][PARAM_LENGTH]) {
     if (!checkSyntax(argc, 2))
         return;
 
@@ -718,7 +727,7 @@ void executaFormatacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH])
         printf("Formatação realizada com sucesso.\n");
 }
 
-void listaDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]) {
+void listaDisco(int argc, char args[MAX_PARAMS][PARAM_LENGTH]) {
     if (!checkSyntax(argc, 2))
         return;
 

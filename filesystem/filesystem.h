@@ -238,21 +238,22 @@ char *infoDisco(char unidade);
 
 int tokenize(const char *source, char destdest[][PARAM_LENGTH],unsigned int expectedTokens, char *delimiter);
 
-void execute(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void execute(int argc, char args[MAX_PARAMS][PARAM_LENGTH]);
 
-void executaCriacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void executaCriacaoDisco(int argc, char args[MAX_PARAMS][PARAM_LENGTH]);
 
-void executaCriacaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void executaCriacaoArquivo(int argc, char args[MAX_PARAMS][PARAM_LENGTH]);
 
-void executaEscritaArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void executaEscritaArquivo(int argc, char args[MAX_PARAMS][PARAM_LENGTH]);
 
-void executaLeituraArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void executaLeituraArquivo(int argc, char args[MAX_PARAMS][PARAM_LENGTH]);
 
-void manipulaEstadoAberturaArquivo(int argc, EstadoArquivo estado, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void manipulaEstadoAberturaArquivo(int argc, EstadoArquivo estado, char args[MAX_PARAMS][PARAM_LENGTH]);
 
-void executaExclusaoArquivo(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void executaExclusaoArquivo(int argc, char args[MAX_PARAMS][PARAM_LENGTH]);
 
-void executaFormatacaoDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void executaFormatacaoDisco(int argc, char args[MAX_PARAMS][PARAM_LENGTH]);
 
-void listaDisco(int argc, const char args[MAX_PARAMS][PARAM_LENGTH]);
+void listaDisco(int argc, char args[MAX_PARAMS][PARAM_LENGTH]);
+
 #endif

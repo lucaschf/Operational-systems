@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+F:/TSI/2nd period/Operational systems/Operational-systems/untitled/tsmm.c
+stdio.h
+-
+stdlib.h
+-
+locale.h
+-
+string.h
+-
+tsmm.h
+F:/TSI/2nd period/Operational systems/Operational-systems/untitled/tsmm.h
+
+F:/TSI/2nd period/Operational systems/Operational-systems/untitled/tsmm.h
+

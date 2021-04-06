@@ -720,6 +720,13 @@ int accessMemory(Task *task, char identifier[], int position) {
 
 int main(int argc, char **argv) {
     setlocale(LC_ALL, "Portuguese");
+
+    argc = 5;
+
+    argv[1] = "C:\\Users\\lucas\\Desktop\\t1.tsk";
+    argv[2] = "C:\\Users\\lucas\\Desktop\\t2.tsk";
+    argv[3] = "C:\\Users\\lucas\\Desktop\\t3.tsk";
+    argv[4] = "C:\\Users\\lucas\\Desktop\\t4.tsk";
     run(argc, argv);
     return 0;
 }
