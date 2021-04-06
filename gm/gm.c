@@ -484,9 +484,6 @@ int execute_allocation(char instruction[50], Task *task) {
 }
 
 int main(int argc, char **argv) {
-    argc = 2;
-    argv[1] = "C:\\Users\\lucas\\Desktop\\t1";
-
     run(argc, argv);
     return 0;
 }
